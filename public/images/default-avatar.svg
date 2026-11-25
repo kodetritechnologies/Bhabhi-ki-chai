@@ -1,0 +1,72 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F8B838"/>
+      <stop offset="100%" stop-color="#DE7418"/>
+    </linearGradient>
+    <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FDDEC0"/>
+      <stop offset="100%" stop-color="#E8B08C"/>
+    </linearGradient>
+    <linearGradient id="hairGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3A1C0E"/>
+      <stop offset="100%" stop-color="#1A0A03"/>
+    </linearGradient>
+    <linearGradient id="shirtGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4A2412"/>
+      <stop offset="100%" stop-color="#281105"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Circle -->
+  <circle cx="128" cy="128" r="128" fill="url(#bgGrad)"/>
+  
+  <!-- Subtle inner warm ring -->
+  <circle cx="128" cy="128" r="123" stroke="#FFF0D0" stroke-width="5" opacity="0.45"/>
+
+  <!-- Shoulders & Kurta -->
+  <path d="M42 256 C42 196, 76 178, 128 178 C180 178, 214 196, 214 256 Z" fill="url(#shirtGrad)"/>
+  
+  <!-- Kurta V-Collar -->
+  <path d="M106 178 L128 214 L150 178 Z" fill="#E8B08C"/>
+  <path d="M128 214 L128 256" stroke="#F4B52E" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Neck -->
+  <rect x="112" y="140" width="32" height="46" rx="6" fill="url(#skinGrad)"/>
+
+  <!-- Head Base -->
+  <ellipse cx="128" cy="118" rx="44" ry="48" fill="url(#skinGrad)"/>
+
+  <!-- Ears -->
+  <circle cx="82" cy="120" r="10.5" fill="url(#skinGrad)"/>
+  <circle cx="174" cy="120" r="10.5" fill="url(#skinGrad)"/>
+  <circle cx="82" cy="120" r="5" fill="#DE9E78" opacity="0.4"/>
+  <circle cx="174" cy="120" r="5" fill="#DE9E78" opacity="0.4"/>
+
+  <!-- Modern Styled Hair -->
+  <path d="M82 110 C76 72, 102 58, 128 58 C154 58, 180 72, 174 110 C166 80, 150 70, 128 70 C106 70, 90 80, 82 110 Z" fill="url(#hairGrad)"/>
+  <path d="M88 90 C88 62, 110 46, 138 48 C162 50, 174 68, 172 92 C166 72, 148 62, 128 62 C108 62, 94 72, 88 90 Z" fill="url(#hairGrad)"/>
+
+  <!-- Eyebrows -->
+  <path d="M96 102 Q110 98 118 102" stroke="#2B1408" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M138 102 Q146 98 160 102" stroke="#2B1408" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- Eyes with lively shine -->
+  <circle cx="108" cy="115" r="5.5" fill="#2B1408"/>
+  <circle cx="148" cy="115" r="5.5" fill="#2B1408"/>
+  <circle cx="110" cy="113" r="2.2" fill="#FFFFFF"/>
+  <circle cx="150" cy="113" r="2.2" fill="#FFFFFF"/>
+
+  <!-- Nose -->
+  <path d="M125 118 Q128 128 132 127" stroke="#C8845E" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Friendly Tapri Mustache -->
+  <path d="M108 134 Q128 139 148 134 Q138 129 128 131 Q118 129 108 134 Z" fill="#2B1408"/>
+
+  <!-- Warm Smile -->
+  <path d="M116 142 Q128 152 140 142" stroke="#2B1408" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+  <!-- Tea Lover Sparkle Accent -->
+  <path d="M196 66 L196 82 M188 74 L204 74" stroke="#FFF4DF" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="196" cy="74" r="2" fill="#FFF4DF"/>
+</svg>

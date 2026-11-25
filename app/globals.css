@@ -1,26 +1,128 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-outfit: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-kalam: 'Kalam', cursive, sans-serif;
+  --font-hand: 'Patrick Hand', cursive, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --font-kalam: 'Kalam', cursive, sans-serif;
+  --font-hand: 'Patrick Hand', cursive, sans-serif;
+  --font-outfit: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-number: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --chai-brown: #4A2412;
+  --coffee: #6B3D24;
+  --parchment: #FFF4DF;
+  --parchment-card: #FDF6E2;
+  --haldi: #F4B52E;
+  --haldi-hover: #E3A41D;
+  --terracotta: #C96B3B;
+  --leaf-green: #5C8B55;
+  --text-dark: #2B211B;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-outfit), 'Outfit', sans-serif;
+  background-color: #F8F1DF;
+  background-image: 
+    radial-gradient(#E8DAC0 0.75px, transparent 0.75px),
+    radial-gradient(#E8DAC0 0.75px, #F8F1DF 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+  color: var(--text-dark);
+}
+
+.font-kalam {
+  font-family: var(--font-kalam);
+}
+
+.font-hand {
+  font-family: var(--font-hand);
+}
+
+.font-outfit {
+  font-family: var(--font-outfit);
+}
+
+.font-number {
+  font-family: var(--font-outfit), 'Outfit', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Warm Parchment Card */
+.tapri-card {
+  background: #FFF9ED;
+  border: 1.5px solid #E6D2B5;
+  box-shadow: 0 6px 18px -4px rgba(74, 36, 18, 0.08), 0 2px 6px -1px rgba(74, 36, 18, 0.04);
+  border-radius: 1.25rem;
+}
+
+/* Hide scrollbar utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tapri-dark-card {
+  background: #3B1B0D;
+  background-image: radial-gradient(#4E2715 1px, transparent 1px);
+  background-size: 16px 16px;
+  border: 1px solid #572A14;
+  color: #FFF4DF;
+  border-radius: 1.25rem;
+}
+
+/* Yellow Highlighted Tape / Note */
+.tapri-tape {
+  background: #F4B52E;
+  color: #381B08;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  transform: rotate(-1.5deg);
+}
+
+/* Post-it / Pinned paper note */
+.pinned-note {
+  background: #FFF3C4;
+  border: 1px solid #EAD186;
+  box-shadow: 2px 4px 10px rgba(74, 36, 18, 0.08);
+  position: relative;
+}
+
+/* Steam animation */
+@keyframes steamRise {
+  0% {
+    transform: translateY(0) scaleX(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-8px) scaleX(1.1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-16px) scaleX(1.2);
+    opacity: 0;
+  }
+}
+
+.animate-steam {
+  animation: steamRise 2.5s infinite ease-in-out;
+}
+
+.animate-steam-delay {
+  animation: steamRise 2.5s infinite ease-in-out;
+  animation-delay: 1.2s;
+}
+
+/* Chalkboard effect */
+.chalkboard {
+  background-color: #242422;
+  border: 4px solid #82542B;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8), 0 4px 12px rgba(0, 0, 0, 0.25);
+  color: #F8F9FA;
 }
