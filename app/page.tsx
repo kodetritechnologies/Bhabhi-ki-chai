@@ -156,7 +156,7 @@ export default function ChaiManagerDashboard() {
         />
 
         {/* Main Content Body */}
-        <main className="flex-1 max-w-[1440px] w-full mx-auto px-3 sm:px-6 pt-0 pb-3 xl:pb-1">
+        <main className="flex-1 max-w-[1440px] w-full mx-auto px-3 sm:px-6 pt-0 pb-1 xl:pb-1">
           {/* Row 1: 4 Metrics Cards */}
           <MetricsRow
             stats={stats}

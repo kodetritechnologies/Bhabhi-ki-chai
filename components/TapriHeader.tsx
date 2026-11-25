@@ -205,78 +205,7 @@ export default function TapriHeader({
         />
       )}
 
-      {/* 1. TOP MOBILE NAV BAR (Shown only on small screens where sidebar is hidden) */}
-      <div className="xl:hidden bg-[#241107] text-[#FFF4DF] border-b border-[#4A2412] px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between shadow-md relative z-40">
-        <div className="flex items-center space-x-2 sm:space-x-2.5">
-          <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-[#F4B52E] bg-[#2E1408] shrink-0">
-            <Image
-              src="/images/chai-pe-charcha-badge.png"
-              alt="Chai Pe Charcha"
-              fill
-              className="object-contain"
-              priority
-              unoptimized
-            />
-          </div>
-          <div>
-            <div className="flex items-center space-x-1">
-              <span className="font-kalam text-base sm:text-lg font-bold text-[#FFF4DF] leading-none">
-                Chai Pe Charcha
-              </span>
-              <span>👑</span>
-            </div>
-            <p className="text-[9px] sm:text-[10px] text-[#E5CCA8] font-hand">Chai ki zimmedari, ab tension nahi!</p>
-          </div>
-        </div>
-
-        {/* Right side mobile controls */}
-        <div className="flex items-center space-x-2">
-          {/* Mobile Notifications Button */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowNotifMenu(!showNotifMenu);
-                setShowUserMenu(false);
-                setShowGroupMenu(false);
-                if (!showNotifMenu) onMarkNotificationsRead?.();
-              }}
-              className="relative p-1.5 sm:p-2 rounded-xl bg-[#381B0C] border border-[#522915] text-[#F4B52E] cursor-pointer"
-            >
-              <Bell className="w-4 h-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-            {showNotifMenu && renderNotificationsDropdown()}
-          </div>
-
-          {/* Mobile User Profile Button */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowUserMenu(!showUserMenu);
-                setShowNotifMenu(false);
-                setShowGroupMenu(false);
-              }}
-              className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-[#F4B52E] bg-[#F4B52E] cursor-pointer flex items-center justify-center shadow-md"
-              title="User Profile"
-            >
-              <Image
-                src={avatarSrc}
-                alt={currentUser?.name || 'Rahul'}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            </button>
-            {showUserMenu && renderProfileDropdown()}
-          </div>
-        </div>
-      </div>
-
-      {/* 2. REAL AUTHENTIC TAPRI COUNTER HERO BANNER (MATCHING USER MOCKUP 1:1) */}
+      {/* REAL AUTHENTIC TAPRI COUNTER HERO BANNER (With Mini-Header Removed on Mobile) */}
       <div className="relative w-full">
         {/* Master Tapri Counter Hero Banner Image */}
         <div className="relative w-full aspect-[2172/724] min-h-[160px] sm:min-h-[220px] max-h-[380px] overflow-hidden bg-[#261207]">
