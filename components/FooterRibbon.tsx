@@ -5,11 +5,11 @@ import React from 'react';
 export default function FooterRibbon() {
   return (
     <footer className="relative w-full mt-2 sm:mt-4 mb-[50px] xl:mb-0 select-none overflow-hidden bg-transparent leading-none">
-      {/* 1. Mobile Banner: Proportionally Designed for Mobile Screens (3x Taller, Crisp Text & Doodles) */}
+      {/* 1. Mobile Banner: Proportionally Designed for Mobile Screens */}
       <div className="block sm:hidden w-full relative z-10 leading-none">
         <img
-          src="/images/chai-lovers-banner-mobile.png"
-          alt="Chai Lovers’ Parchment Banner"
+          src="/images/Chai%20Doston%20Ke%20Saath%20Banner.png"
+          alt="Chai Doston Ke Saath Banner"
           className="w-full h-auto block object-contain pointer-events-none"
         />
       </div>
