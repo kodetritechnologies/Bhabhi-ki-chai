@@ -113,10 +113,10 @@ export default function TodayDutyCard({
           </div>
         </div>
 
-        {/* Middle Area: Content on Left + Cutting Chai Glass on Right */}
-        <div className="flex items-center justify-between gap-1 sm:gap-2 my-auto">
-          {/* Left Text Content */}
-          <div className="flex-1 min-w-0 pr-1">
+        {/* Main Body: Left Content + Right Large Chai Glass */}
+        <div className="flex items-end justify-between gap-2 my-auto pt-1 relative">
+          {/* Left Column: Greeting, Quote, Stats & CTA Button */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 z-10">
             {/* Person Name with Cute Hand-Drawn Doodle Crown */}
             <div className="flex items-center gap-1.5">
               <h2 className="font-kalam text-[28px] xs:text-[32px] sm:text-[36px] lg:text-[40px] font-bold text-[#140B05] leading-none tracking-tight">
@@ -146,7 +146,7 @@ export default function TodayDutyCard({
               <span className="font-medium text-[#422917]">{displayDate}</span>
             </p>
 
-            {/* Handwritten Hindi Quote (2 clean compact lines matching mockup) */}
+            {/* Handwritten Hindi Quote */}
             <div className="my-2 sm:my-2.5 font-kalam text-[#1A0E06] text-xs xs:text-[13px] sm:text-[14px] lg:text-[15px] font-bold leading-snug">
               <p className="italic">Bhai, aaj aapki baari hai!</p>
               <p className="italic flex items-center gap-1.5 mt-0.5">
@@ -168,58 +168,58 @@ export default function TodayDutyCard({
                 </svg>
               </p>
             </div>
+
+            {/* Stats: Total Members & Last Bill */}
+            <div className="flex items-center gap-1 sm:gap-2 mt-0.5">
+              {/* Total Members Pill Box */}
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-[#F4CF96]/75 border border-[#DEB578]/70 rounded-xl px-1.5 sm:px-2.5 py-1 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)] shrink-0">
+                <Users className="w-3.5 h-3.5 text-[#2E180B] shrink-0" />
+                <div className="leading-tight">
+                  <span className="text-[9px] sm:text-[10px] text-[#63432B] font-medium block whitespace-nowrap">Total Members</span>
+                  <span className="text-xs font-bold text-[#1A0E06] leading-none">{totalMembers}</span>
+                </div>
+              </div>
+
+              {/* Last Bill Pill Box */}
+              <div className="flex items-center gap-1 bg-[#F4CF96]/75 border border-[#DEB578]/70 rounded-xl px-1.5 sm:px-2.5 py-1 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)] shrink-0">
+                <span className="text-[#2E180B] font-bold text-xs leading-none pl-0.5">₹</span>
+                <div className="leading-tight">
+                  <span className="text-[9px] sm:text-[10px] text-[#63432B] font-medium block whitespace-nowrap">Last Bill</span>
+                  <span className="text-xs font-bold text-[#1A0E06] leading-none">₹{lastBill}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mark as Completed CTA Button */}
+            <div className="mt-2.5">
+              <button
+                onClick={onMarkCompleted}
+                disabled={isCompleted}
+                className={`px-3 sm:px-4 py-2 rounded-xl font-bold text-[11px] sm:text-xs lg:text-[13px] flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap ${
+                  isCompleted
+                    ? 'bg-[#2E7D32] text-white cursor-default'
+                    : 'bg-[#1C140E] hover:bg-[#331E12] text-white'
+                }`}
+              >
+                <span>{isCompleted ? 'Chai Completed' : 'Mark as Completed'}</span>
+                <span className="text-sm font-bold">✓</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right Side: Exact Cutting Chai Glass Seamlessly Integrated */}
-          <div className="shrink-0 flex items-center justify-center relative -mr-2 sm:-mr-3 -my-2">
-            <div className="relative w-24 h-24 xs:w-28 xs:h-28 sm:w-34 sm:h-34 lg:w-38 lg:h-38 select-none pointer-events-none">
+          {/* Right Column: Much Larger, Hero Chai Glass filling the circled right side */}
+          <div className="shrink-0 flex items-end justify-center relative select-none pointer-events-none -mr-1 sm:-mr-2 -mb-1">
+            <div className="relative w-32 h-44 xs:w-36 xs:h-48 sm:w-44 sm:h-56 lg:w-48 lg:h-60">
               <Image
-                src="/images/Steaming Masala Chai in Glass.png"
-                alt="Steaming Masala Chai in Glass"
+                src="/images/Radiant Glass of Chai.png"
+                alt="Radiant Glass of Chai"
                 fill
-                className="object-contain"
+                className="object-contain object-bottom"
                 unoptimized
                 priority
               />
             </div>
           </div>
-        </div>
-
-        {/* Bottom Row: Total Members, Last Bill & Mark as Completed Button */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 mt-1 sm:mt-1.5 pt-1">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Total Members Pill Box */}
-            <div className="flex items-center gap-1.5 bg-[#F4CF96]/75 border border-[#DEB578]/70 rounded-xl px-2 sm:px-2.5 py-1 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]">
-              <Users className="w-3.5 h-3.5 text-[#2E180B] shrink-0" />
-              <div className="leading-tight">
-                <span className="text-[9px] text-[#63432B] font-medium block">Total Members</span>
-                <span className="text-xs font-bold text-[#1A0E06]">{totalMembers}</span>
-              </div>
-            </div>
-
-            {/* Last Bill Pill Box */}
-            <div className="flex items-center gap-1 bg-[#F4CF96]/75 border border-[#DEB578]/70 rounded-xl px-2 sm:px-2.5 py-1 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)]">
-              <span className="text-[#2E180B] font-bold text-xs leading-none pl-0.5">₹</span>
-              <div className="leading-tight">
-                <span className="text-[9px] text-[#63432B] font-medium block">Last Bill</span>
-                <span className="text-xs font-bold text-[#1A0E06]">₹{lastBill}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Mark as Completed CTA Button */}
-          <button
-            onClick={onMarkCompleted}
-            disabled={isCompleted}
-            className={`px-3 sm:px-4 py-2 rounded-xl font-bold text-[11px] sm:text-xs lg:text-[13px] flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap ${
-              isCompleted
-                ? 'bg-[#2E7D32] text-white cursor-default'
-                : 'bg-[#1C140E] hover:bg-[#331E12] text-white'
-            }`}
-          >
-            <span>{isCompleted ? 'Chai Completed' : 'Mark as Completed'}</span>
-            <span className="text-sm font-bold">✓</span>
-          </button>
         </div>
       </div>
     </div>

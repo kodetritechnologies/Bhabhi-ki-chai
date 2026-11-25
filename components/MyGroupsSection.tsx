@@ -78,22 +78,23 @@ export default function MyGroupsSection({
                 }`}
               >
                 {/* Banner Preview */}
-                <div className="relative h-16 w-full bg-[#1A0B04] overflow-hidden">
+                <div className="relative h-24 sm:h-20 lg:h-24 w-full bg-[#1A0B04] overflow-hidden">
                   {grp.bannerImage ? (
                     <Image
                       src={grp.bannerImage}
                       alt={grp.name}
                       fill
-                      className="object-cover group-hover:scale-105 transition-transform"
+                      className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
                       unoptimized
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xl">☕</div>
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#381B0C] to-[#1A0B04] text-xl">☕</div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#2C1409] to-transparent opacity-80" />
+                  {/* Subtle bottom edge gradient so image is crisp and clear */}
+                  <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#2C1409] to-transparent pointer-events-none" />
                   <span
-                    className={`absolute top-1 right-1 px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
-                      grp.role === 'admin' ? 'bg-[#10B981] text-white' : 'bg-[#3B82F6] text-white'
+                    className={`absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md ${
+                      grp.role === 'admin' ? 'bg-[#10B981] text-white shadow-[#10B981]/30' : 'bg-[#3B82F6] text-white shadow-[#3B82F6]/30'
                     }`}
                   >
                     {grp.role}
@@ -101,11 +102,11 @@ export default function MyGroupsSection({
                 </div>
 
                 {/* Card Info */}
-                <div className="p-2 text-left">
-                  <h5 className="font-bold text-[#FFF4DF] text-xs truncate group-hover:text-[#F4B52E]">
+                <div className="p-2.5 text-left">
+                  <h5 className="font-bold text-[#FFF4DF] text-xs truncate group-hover:text-[#F4B52E] transition-colors">
                     {grp.name}
                   </h5>
-                  <p className="text-[10px] text-[#CDB29B]">
+                  <p className="text-[10px] text-[#CDB29B] mt-0.5">
                     {grp.memberCount} M • {grp.workingDaysCount} D/W
                   </p>
                   <p className="text-[9px] text-[#F4B52E] font-semibold mt-1 truncate">
@@ -119,13 +120,15 @@ export default function MyGroupsSection({
       </div>
 
       {/* Create New Group Button */}
-      <div className="mt-3 pt-2 border-t border-[#4A2412]">
+      <div className="mt-4 pt-3 border-t border-[#522915]">
         <button
           onClick={onCreateGroup}
-          className="w-full py-1.5 rounded-xl border border-dashed border-[#6B371E] hover:border-[#F4B52E] text-[#F4B52E] text-xs font-bold hover:bg-[#3D1E0E] transition-colors flex items-center justify-center gap-1.5"
+          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#F4B52E] via-[#F2A81B] to-[#DE9008] hover:from-[#F6C04E] hover:to-[#ECA318] text-[#281308] text-xs font-extrabold tracking-wide shadow-md hover:shadow-lg shadow-[#F4B52E]/15 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer group"
         >
-          <Plus className="w-3.5 h-3.5" />
-          <span>+ Create New Group</span>
+          <div className="w-5 h-5 rounded-full bg-[#281308]/15 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
+          <span>Create New Group</span>
         </button>
       </div>
     </div>

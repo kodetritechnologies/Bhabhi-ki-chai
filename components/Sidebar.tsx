@@ -7,7 +7,6 @@ import {
   LuSquarePlus as SquarePlus,
   LuUserPlus as UserPlus,
   LuBell as Bell,
-  LuSettings as Settings,
 } from 'react-icons/lu';
 
 interface SidebarProps {
@@ -34,7 +33,6 @@ export default function Sidebar({
 
   const bottomMenuItems = [
     { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadCount, action: onOpenNotifications },
-    { id: 'settings', label: 'Settings', icon: Settings, action: () => onTabChange?.('settings') },
   ];
 
   const renderMenuItem = (item: {

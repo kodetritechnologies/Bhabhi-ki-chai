@@ -4,7 +4,7 @@ import React from 'react';
 
 export default function FooterRibbon() {
   return (
-    <footer className="relative w-full mt-2 sm:mt-4 mb-[50px] xl:mb-0 select-none overflow-hidden bg-transparent leading-none">
+    <footer className="relative w-full mt-1 sm:mt-4 mb-[46px] xl:mb-0 select-none overflow-hidden bg-transparent leading-none">
       {/* 1. Mobile Banner: Proportionally Designed for Mobile Screens */}
       <div className="block sm:hidden w-full relative z-10 leading-none">
         <img

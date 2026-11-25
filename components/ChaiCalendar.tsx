@@ -263,7 +263,7 @@ export default function ChaiCalendar({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-between rounded-[22px] sm:rounded-[26px] p-3.5 sm:p-5 lg:p-6 bg-[#FAF6EE] border border-[#EADBCA] shadow-[0_8px_24px_rgba(74,36,18,0.06)] select-none">
+    <div className="relative w-full h-full flex flex-col justify-between rounded-[22px] sm:rounded-[26px] p-3.5 sm:p-5 lg:p-6 pb-8 sm:pb-10 bg-[#FAF6EE] border border-[#EADBCA] shadow-[0_8px_24px_rgba(74,36,18,0.06)] select-none">
       {/* Top Header: Chai Calendar title + Doodle Sparkle */}
       <div className="flex items-center justify-between pb-2.5 sm:pb-3 mb-2 border-b border-[#EFE3D2]/70">
         <div className="flex items-center gap-2 sm:gap-2.5">
@@ -449,7 +449,7 @@ export default function ChaiCalendar({
         </div>
 
         {/* Right Side: Sticky Notepad "Upcoming Schedule" (md:col-span-5) */}
-        <div className="md:col-span-5 relative mt-3 md:mt-0 flex flex-col h-full">
+        <div className="md:col-span-5 relative mt-5 md:mt-0 mb-4 md:mb-0 flex flex-col h-full">
           {/* Hand-drawn sketch curved arrow at top right */}
           <div className="absolute -top-3.5 right-3 z-20 pointer-events-none">
             <svg
@@ -468,7 +468,7 @@ export default function ChaiCalendar({
 
           {/* The Notepad Card */}
           <div
-            className="w-full h-full bg-[#FDECA6] border border-[#F4DA78] rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow"
+            className="w-full h-full bg-[#FDECA6] border border-[#F4DA78] rounded-2xl p-4 sm:p-5 pb-7 sm:pb-9 shadow-sm flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow"
             onClick={onOpenSwap}
             title="Click to view full duty rotation or swap duty"
           >
@@ -504,7 +504,7 @@ export default function ChaiCalendar({
             </div>
 
             {/* Note on bottom of paper: No Chai on Sunday ☺ */}
-            <div className="mt-3 pt-1 text-center font-kalam text-xs sm:text-[13px] text-[#24140A] font-bold flex items-center justify-center gap-1.5 leading-none">
+            <div className="mt-6 pt-2 pb-4 mb-2 text-center font-kalam text-xs sm:text-[13px] text-[#24140A] font-bold flex items-center justify-center gap-1.5 leading-none">
               <span>No Chai on Sunday</span>
               <svg
                 className="w-3.5 h-3.5 text-[#24140A] inline-block shrink-0"

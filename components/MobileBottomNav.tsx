@@ -6,7 +6,6 @@ import {
   LuCalendar as Calendar,
   LuUsers as Users,
   LuHistory as History,
-  LuSettings as Settings,
 } from 'react-icons/lu';
 
 interface MobileBottomNavProps {
@@ -23,7 +22,6 @@ export default function MobileBottomNav({
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'groups', label: 'My Groups', icon: Users },
     { id: 'history', label: 'History', icon: History },
-    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (

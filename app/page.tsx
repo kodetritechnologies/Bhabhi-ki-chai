@@ -90,7 +90,7 @@ export default function ChaiManagerDashboard() {
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-[#FBF5E8] flex flex-col items-center justify-center space-y-4">
+      <div className="fixed inset-0 z-50 bg-[#FBF5E8] flex flex-col items-center justify-center space-y-4 overflow-hidden select-none">
         <div className="relative w-24 h-24 rounded-full overflow-hidden shadow-2xl border-2 border-[#F4B52E] bg-[#2E1408] animate-pulse">
           <img
             src="/images/chai-pe-charcha-badge.png"
@@ -166,7 +166,7 @@ export default function ChaiManagerDashboard() {
           />
 
           {/* Row 2: Today's Chai Duty + Chai Calendar (2 Columns side by side like Mockup) */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 my-5 items-stretch">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-7 xl:gap-5 mt-5 mb-10 sm:mb-12 items-stretch">
             {/* Left: Today's Chai Duty Card */}
             <div id="today-duty-section" className="xl:col-span-5 flex flex-col h-full">
               <TodayDutyCard
@@ -181,7 +181,7 @@ export default function ChaiManagerDashboard() {
             </div>
 
             {/* Right: Chai Calendar & Upcoming Schedule Card */}
-            <div id="calendar-section" className="xl:col-span-7 flex flex-col h-full">
+            <div id="calendar-section" className="xl:col-span-7 flex flex-col h-full mb-3 xl:mb-0">
               <ChaiCalendar
                 currentGroupId={currentGroup?._id}
                 calendarDuties={calendarDuties}
@@ -193,7 +193,7 @@ export default function ChaiManagerDashboard() {
           </div>
 
           {/* Row 3: Bottom 3 Cards (My Groups, Recent Activity, Notifications - exact match!) */}
-          <div id="groups-section" className="grid grid-cols-1 md:grid-cols-12 gap-5 mt-5 mb-2">
+          <div id="groups-section" className="grid grid-cols-1 md:grid-cols-12 gap-5 mt-8 sm:mt-10 mb-4">
             {/* Card 1: My Groups */}
             <div className="md:col-span-12 xl:col-span-5">
               <MyGroupsSection
