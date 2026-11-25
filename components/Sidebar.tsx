@@ -116,7 +116,7 @@ export default function Sidebar({
           >
             <div className="flex items-center justify-between text-[9px]">
               <span className="font-bold tracking-wider text-[#E5CCA8] group-hover:text-[#F4B52E] transition-colors uppercase flex items-center gap-1">
-                <span>🤝</span> Technology Partner
+                <span>🤝</span> Partner By
               </span>
               <span className="text-[#E5CCA8] group-hover:text-[#F4B52E] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-150">
                 ↗
