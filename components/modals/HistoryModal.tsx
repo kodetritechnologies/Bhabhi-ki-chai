@@ -3,10 +3,7 @@
 import React from 'react';
 import {
   LuX as X,
-  LuCalendar as Calendar,
-  LuIndianRupee as IndianRupee,
   LuCircleCheck as CheckCircle2,
-  LuDownload as Download,
 } from 'react-icons/lu';
 
 interface HistoryModalProps {

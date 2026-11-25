@@ -3,21 +3,98 @@ import { connectToDatabase } from '@/lib/db';
 import { ChaiGroup } from '@/models/ChaiGroup';
 import { GroupMember } from '@/models/GroupMember';
 import { User } from '@/models/User';
-import { generateScheduleForGroup } from '@/lib/rotationEngine';
+import { DutyAssignment } from '@/models/DutyAssignment';
+import { AuditLog } from '@/models/AuditLog';
+import { Notification } from '@/models/Notification';
+import { generateScheduleForGroup, formatDateKey } from '@/lib/rotationEngine';
 
-export async function GET() {
+const BANNER_PRESETS = [
+  '/images/golden-hour-tapri.jpg',
+  '/images/doston-ki-chai-banner.jpg',
+  '/images/cozy-tea-stall.jpg',
+  '/images/chai-lovers-banner.jpg',
+];
+
+const MEMBER_COLORS = ['#3B82F6', '#10B981', '#EC4899', '#F97316', '#8B5CF6', '#EAB308'];
+
+export async function GET(request: Request) {
   try {
     await connectToDatabase();
-    const currentUser = await User.findOne({ email: 'rahul@example.com' });
-    if (!currentUser) return NextResponse.json({ groups: [] });
+    const { searchParams } = new URL(request.url);
+    const userEmail = searchParams.get('userEmail');
 
-    const memberships = await GroupMember.find({ userId: currentUser._id, status: 'active' });
+    let currentUser = null;
+    if (userEmail) {
+      currentUser = await User.findOne({ email: userEmail.trim().toLowerCase() }).lean();
+    }
+    if (!currentUser) {
+      currentUser = await User.findOne({ email: 'rahul@example.com' }).lean();
+    }
+    if (!currentUser) {
+      currentUser = await User.findOne().lean();
+    }
+
+    if (!currentUser) {
+      return NextResponse.json({ success: true, groups: [] });
+    }
+
+    const memberships = await GroupMember.find({ userId: currentUser._id, status: 'active' }).lean();
     const groupIds = memberships.map((m) => m.groupId);
 
-    const groups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
-    return NextResponse.json({ success: true, groups });
+    let groups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
+
+    // If user has no active groups yet, return active groups available to join/view
+    if (groups.length === 0) {
+      groups = await ChaiGroup.find({ status: 'active' }).limit(4).lean();
+    }
+
+    const todayStr = formatDateKey(new Date());
+
+    // Enrich groups with memberCount, user's role, and nextDuty
+    const enrichedGroups = await Promise.all(
+      groups.map(async (grp) => {
+        const memCount = await GroupMember.countDocuments({ groupId: grp._id, status: 'active' });
+        const userMem = memberships.find((m) => m.groupId.toString() === grp._id.toString());
+        const role = userMem ? userMem.role : 'member';
+
+        const nextDuty = await DutyAssignment.findOne({
+          groupId: grp._id,
+          dutyDate: { $gte: todayStr },
+        })
+          .sort({ dutyDate: 1 })
+          .populate('assignedUserId', 'name avatar')
+          .lean();
+
+        type UserType = { _id: unknown; name: string };
+        const assignedUser = nextDuty?.assignedUserId as unknown as UserType | undefined;
+        const isUser = assignedUser?._id?.toString() === currentUser._id.toString();
+
+        return {
+          _id: grp._id,
+          name: grp.name,
+          description: grp.description,
+          role,
+          memberCount: memCount,
+          workingDaysCount: grp.workingDays ? grp.workingDays.length : 6,
+          bannerImage: grp.bannerImage || BANNER_PRESETS[0],
+          inviteCode: grp.inviteCode,
+          chaiTime: grp.chaiTime,
+          workingDays: grp.workingDays,
+          nextDuty: nextDuty
+            ? {
+                date: nextDuty.dutyDate,
+                assignedTo: assignedUser?.name || 'TBD',
+                isUser,
+              }
+            : null,
+        };
+      })
+    );
+
+    return NextResponse.json({ success: true, groups: enrichedGroups });
   } catch (error: unknown) {
     const err = error as Error;
+    console.error('Error fetching groups:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
@@ -26,46 +103,132 @@ export async function POST(request: Request) {
   try {
     await connectToDatabase();
     const body = await request.json();
-    const { name, description = '', workingDays = [1, 2, 3, 4, 5, 6], chaiTime = '10:00 AM' } = body;
-
-    if (!name) {
-      return NextResponse.json({ error: 'Group name is required' }, { status: 400 });
-    }
-
-    const currentUser = await User.findOne({ email: 'rahul@example.com' });
-    if (!currentUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    const inviteCode = `CHAI-${name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`;
-
-    const group = await ChaiGroup.create({
+    const {
       name,
-      description,
+      description = '',
+      workingDays = [1, 2, 3, 4, 5, 6],
+      chaiTime = '10:30 AM',
+      creatorEmail,
+      userEmail,
+      memberEmails = [],
+      bannerImage,
+    } = body;
+
+    if (!name || !name.trim()) {
+      return NextResponse.json({ success: false, error: 'Group ka naam zaroori hai!' }, { status: 400 });
+    }
+
+    const emailToFind = (creatorEmail || userEmail || '').trim().toLowerCase();
+    let currentUser = null;
+    if (emailToFind) {
+      currentUser = await User.findOne({ email: emailToFind });
+    }
+    if (!currentUser) {
+      currentUser = await User.findOne({ email: 'rahul@example.com' });
+    }
+    if (!currentUser) {
+      currentUser = await User.findOne();
+    }
+    if (!currentUser) {
+      return NextResponse.json({ success: false, error: 'Logged-in user nahi mila!' }, { status: 404 });
+    }
+
+    // Clean invite code generation: CHAI-<NAME_5_CHARS>-<RANDOM_NUMBER>
+    const cleanPrefix = name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase() || 'TAPRI';
+    const randomCode = Math.floor(100 + Math.random() * 900);
+    const inviteCode = `CHAI-${cleanPrefix}-${randomCode}`;
+
+    const chosenBanner =
+      bannerImage || BANNER_PRESETS[Math.floor(Math.random() * BANNER_PRESETS.length)];
+
+    // Create the ChaiGroup
+    const newGroup = await ChaiGroup.create({
+      name: name.trim(),
+      description: description.trim(),
       createdBy: currentUser._id,
       timezone: 'Asia/Kolkata',
-      workingDays,
-      chaiTime,
+      workingDays: Array.isArray(workingDays) && workingDays.length > 0 ? workingDays : [1, 2, 3, 4, 5, 6],
+      chaiTime: chaiTime.trim() || '10:30 AM',
       status: 'active',
       inviteCode,
-      bannerImage: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=500&q=80',
+      bannerImage: chosenBanner,
+      rotationPolicy: 'move_to_end',
     });
 
-    // Add creator as Admin
+    // 1. Add Creator as Admin with position 0
     await GroupMember.create({
-      groupId: group._id,
+      groupId: newGroup._id,
       userId: currentUser._id,
       role: 'admin',
       rotationPosition: 0,
-      color: '#3B82F6',
+      color: MEMBER_COLORS[0],
+      status: 'active',
     });
 
-    // Auto-generate initial schedule
-    await generateScheduleForGroup(group._id, 14);
+    let currentPosition = 1;
 
-    return NextResponse.json({ success: true, group });
+    // 2. Add any additional invited member emails
+    if (Array.isArray(memberEmails) && memberEmails.length > 0) {
+      for (const rawEmail of memberEmails) {
+        const cleanEmail = (rawEmail || '').trim().toLowerCase();
+        if (!cleanEmail || cleanEmail === currentUser.email) continue;
+
+        let memberUser = await User.findOne({ email: cleanEmail });
+        if (!memberUser) {
+          // Create user account if doesn't exist yet
+          const namePart = cleanEmail.split('@')[0];
+          const autoName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+          memberUser = await User.create({
+            name: autoName,
+            email: cleanEmail,
+            avatar: '/images/default-avatar.png',
+          });
+        }
+
+        // Add to group member
+        await GroupMember.create({
+          groupId: newGroup._id,
+          userId: memberUser._id,
+          role: 'member',
+          rotationPosition: currentPosition,
+          color: MEMBER_COLORS[currentPosition % MEMBER_COLORS.length],
+          status: 'active',
+        });
+        currentPosition++;
+      }
+    }
+
+    // 3. Auto-generate schedule for this new group (30 days ahead)
+    await generateScheduleForGroup(newGroup._id, 30);
+
+    // 4. Audit Log
+    await AuditLog.create({
+      groupId: newGroup._id,
+      actorUserId: currentUser._id,
+      action: 'group_created',
+      entityType: 'ChaiGroup',
+      entityId: newGroup._id.toString(),
+      reason: `Naya group '${newGroup.name}' banaya gaya. Invite code: ${inviteCode}`,
+    });
+
+    // 5. Notification
+    await Notification.create({
+      userId: currentUser._id,
+      groupId: newGroup._id,
+      title: 'Chai Group Ban Gaya! ☕',
+      message: `'${newGroup.name}' group safalta se create ho gaya hai. Invite code: ${inviteCode}`,
+      type: 'member_joined',
+      read: false,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `'${newGroup.name}' safaltapoorvak create ho gaya!`,
+      group: newGroup,
+    });
   } catch (error: unknown) {
     const err = error as Error;
+    console.error('Error creating group:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

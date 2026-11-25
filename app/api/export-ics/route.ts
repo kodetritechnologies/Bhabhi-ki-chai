@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       .lean();
 
     // Build standard ICS calendar file
-    let icsContent = [
+    const icsContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
       'PRODID:-//Chai Pe Charcha//Chai Duty Schedule//EN',

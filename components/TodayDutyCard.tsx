@@ -12,12 +12,14 @@ interface TodayDutyCardProps {
   assignedUser?: {
     name: string;
     avatar?: string;
+    email?: string;
   };
   groupName?: string;
   dutyDateStr?: string;
   status?: string;
   totalMembers?: number;
   lastBill?: number;
+  isUserDuty?: boolean;
   onMarkCompleted?: () => void;
 }
 
@@ -57,10 +59,11 @@ export default function TodayDutyCard({
   status = 'pending',
   totalMembers = 4,
   lastBill = 100,
+  isUserDuty = false,
   onMarkCompleted,
 }: TodayDutyCardProps) {
   const isCompleted = status === 'completed';
-  const userName = assignedUser?.name || 'Rahul';
+  const userName = isUserDuty ? 'You' : assignedUser?.name || 'Rahul';
   const displayDate = formatDisplayDate(dutyDateStr);
 
   return (

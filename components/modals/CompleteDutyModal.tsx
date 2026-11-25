@@ -4,10 +4,7 @@ import React, { useState } from 'react';
 import {
   LuX as X,
   LuCheck as Check,
-  LuCoffee as Coffee,
-  LuIndianRupee as IndianRupee,
   LuCreditCard as CreditCard,
-  LuReceipt as Receipt,
 } from 'react-icons/lu';
 import confetti from 'canvas-confetti';
 

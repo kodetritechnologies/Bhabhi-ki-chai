@@ -22,9 +22,19 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const requestedGroupId = searchParams.get('groupId');
+    const requestedUserEmail = searchParams.get('userEmail');
 
-    // 1. Current logged-in user (default Rahul)
-    const currentUser = await User.findOne({ email: 'rahul@example.com' }).lean();
+    // 1. Current logged-in user (from userEmail param or default Rahul)
+    let currentUser = null;
+    if (requestedUserEmail) {
+      currentUser = await User.findOne({ email: requestedUserEmail.trim().toLowerCase() }).lean();
+    }
+    if (!currentUser) {
+      currentUser = await User.findOne({ email: 'rahul@example.com' }).lean();
+    }
+    if (!currentUser) {
+      currentUser = await User.findOne().lean();
+    }
     if (!currentUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -33,11 +43,16 @@ export async function GET(request: Request) {
     const memberships = await GroupMember.find({ userId: currentUser._id, status: 'active' }).lean();
     const groupIds = memberships.map((m) => m.groupId);
 
-    const allGroups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
+    let allGroups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
+
+    // If user is new and has no groups yet, provide existing active groups to view
+    if (allGroups.length === 0) {
+      allGroups = await ChaiGroup.find({ status: 'active' }).limit(3).lean();
+    }
 
     // Determine active group
     let currentGroup = requestedGroupId
-      ? allGroups.find((g) => g._id.toString() === requestedGroupId)
+      ? (allGroups.find((g) => g._id.toString() === requestedGroupId) || (await ChaiGroup.findById(requestedGroupId).lean()))
       : allGroups[0];
 
     if (!currentGroup && allGroups.length > 0) {

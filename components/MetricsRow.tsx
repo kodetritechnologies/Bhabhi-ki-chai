@@ -15,6 +15,7 @@ interface MetricsRowProps {
   onManageGroups?: () => void;
   onOpenCalendar?: () => void;
   onOpenExpenses?: () => void;
+  className?: string;
 }
 
 export default function MetricsRow({
@@ -27,11 +28,12 @@ export default function MetricsRow({
   onManageGroups,
   onOpenCalendar,
   onOpenExpenses,
+  className,
 }: MetricsRowProps) {
   return (
-    <div className="relative w-full -mt-6 sm:-mt-9 lg:-mt-11 z-20">
+    <div className={className || "relative w-full -mt-6 sm:-mt-9 lg:-mt-11 z-20"}>
       {/* 4 Responsive Dynamic Metric Cards (Matching User Mockup 1:1) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 lg:gap-4 xl:gap-5 select-none lg:mr-36 xl:mr-48 2xl:mr-56">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 select-none lg:mr-28 xl:mr-36 2xl:mr-44">
         {/* 1. My Groups */}
         <div
           onClick={onManageGroups}
@@ -43,26 +45,14 @@ export default function MetricsRow({
           </div>
 
           {/* Value & Label */}
-          <div className="flex flex-col justify-center min-w-0 pr-6 sm:pr-12">
+          <div className="flex flex-col justify-center min-w-0">
             <span className="font-extrabold text-[22px] sm:text-[33px] text-[#140F0B] tracking-tight leading-none">
               {stats.myGroupsCount}
             </span>
-            <span className="text-[11px] sm:text-[13px] font-semibold text-[#54433A] leading-tight mt-0.5 sm:mt-1 truncate">
+            <span className="text-[11px] sm:text-[13px] font-semibold text-[#54433A] leading-tight mt-0.5 sm:mt-1 whitespace-nowrap">
               My Groups
             </span>
           </div>
-
-          {/* Manage Link (bottom right) */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onManageGroups?.();
-            }}
-            className="absolute right-2 bottom-1.5 sm:right-3.5 sm:bottom-2.5 text-[10px] sm:text-[12px] font-semibold text-[#553826] hover:text-[#B25316] transition-colors flex items-center gap-0.5 cursor-pointer"
-          >
-            Manage →
-          </button>
         </div>
 
         {/* 2. Chai Days This Month */}
@@ -81,10 +71,10 @@ export default function MetricsRow({
               {stats.chaiDaysThisMonth}
             </span>
             <div className="mt-0.5 sm:mt-1 leading-[1.15]">
-              <span className="text-[11px] sm:text-[13px] font-semibold text-[#54433A] block">
+              <span className="text-[11px] sm:text-[13px] font-semibold text-[#54433A] block whitespace-nowrap">
                 Chai Days
               </span>
-              <span className="text-[9px] sm:text-[11px] text-[#7A695E] font-medium block">
+              <span className="text-[9px] sm:text-[11px] text-[#7A695E] font-medium block whitespace-nowrap">
                 This Month
               </span>
             </div>
@@ -108,7 +98,7 @@ export default function MetricsRow({
             <span className="font-extrabold text-[22px] sm:text-[33px] text-[#140F0B] tracking-tight leading-none">
               ₹{stats.totalExpenses}
             </span>
-            <span className="text-[11px] sm:text-[13px] font-semibold text-[#54433A] leading-tight mt-0.5 sm:mt-1 truncate">
+            <span className="text-[11px] sm:text-[13px] font-semibold text-[#54433A] leading-tight mt-0.5 sm:mt-1 whitespace-nowrap">
               Total Expenses
             </span>
           </div>

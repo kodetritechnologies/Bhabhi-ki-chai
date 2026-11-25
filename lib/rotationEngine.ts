@@ -1,6 +1,6 @@
 import { DutyAssignment, IDutyAssignment } from '@/models/DutyAssignment';
 import { GroupMember, IGroupMember } from '@/models/GroupMember';
-import { ChaiGroup, IChaiGroup } from '@/models/ChaiGroup';
+import { ChaiGroup } from '@/models/ChaiGroup';
 import mongoose from 'mongoose';
 
 /**

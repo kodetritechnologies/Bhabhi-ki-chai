@@ -8,6 +8,8 @@ import {
   LuPlus as Plus,
   LuUsers as Users,
   LuHistory as HistoryIcon,
+  LuLogOut as LogOut,
+  LuUser as UserIcon,
 } from 'react-icons/lu';
 import Image from 'next/image';
 
@@ -35,10 +37,13 @@ interface TapriHeaderProps {
     timeAgoText?: string;
   }>;
   unreadCount?: number;
+  isLoggedIn?: boolean;
   onSelectGroup?: (groupId: string) => void;
   onOpenCreateGroup?: () => void;
   onMarkNotificationsRead?: () => void;
   onOpenHistory?: () => void;
+  onOpenAuthModal?: () => void;
+  onLogout?: () => void;
 }
 
 export default function TapriHeader({
@@ -47,10 +52,13 @@ export default function TapriHeader({
   groups = [],
   notifications = [],
   unreadCount = 3,
+  isLoggedIn = false,
   onSelectGroup,
   onOpenCreateGroup,
   onMarkNotificationsRead,
   onOpenHistory,
+  onOpenAuthModal,
+  onLogout,
 }: TapriHeaderProps) {
   const [showGroupMenu, setShowGroupMenu] = useState(false);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
@@ -156,6 +164,22 @@ export default function TapriHeader({
             </span>
           )}
         </button>
+        {onLogout && (
+          <button
+            type="button"
+            onClick={() => {
+              setShowUserMenu(false);
+              onLogout();
+            }}
+            className="w-full text-left px-3.5 py-2.5 text-xs flex items-center gap-2.5 text-red-700 hover:bg-red-50/80 transition-colors cursor-pointer border-t border-[#EEDFCA]"
+          >
+            <LogOut className="w-4 h-4 text-red-600 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <span className="font-bold block truncate">Logout</span>
+              <span className="text-[10px] text-red-500/80 block truncate">Account se log out karein</span>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Footer Tagline */}
@@ -248,7 +272,7 @@ export default function TapriHeader({
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-black/25 pointer-events-none" />
         </div>
 
-        {/* 1. Mobile View: Real Authentic Torn-Edge Banner (Derived from Vintage Torn-Edge Parchment Banner.original.png, perfectly blended) */}
+        {/* 1. Mobile View: Real Authentic Torn-Edge Banner (Derived from Vintage Torn-Edge Parchment Banner, perfectly blended) */}
         <div className="block sm:hidden absolute -bottom-[1px] left-0 right-0 w-full pointer-events-none select-none z-10 leading-none overflow-hidden">
           <img
             src="/images/Vintage%20Torn-Edge%20Parchment%20Banner.mobile.png"
@@ -266,108 +290,123 @@ export default function TapriHeader({
           />
         </div>
 
-        {/* Top Floating Controls on Desktop & Mobile (Group Selector, Notifications & Rahul Profile) */}
+        {/* Top Floating Controls on Desktop & Mobile */}
         <div className="absolute top-2 sm:top-3.5 right-2 sm:right-6 z-50 flex items-center space-x-1.5 sm:space-x-3">
-          {/* Group Selector Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowGroupMenu(!showGroupMenu);
-                setShowUserMenu(false);
-                setShowNotifMenu(false);
-              }}
-              className="hidden md:flex items-center space-x-1.5 bg-black/60 hover:bg-black/80 backdrop-blur-md text-[#FFF4DF] px-3 py-1.5 rounded-full border border-[#F4B52E]/50 text-xs font-semibold transition-all shadow-lg cursor-pointer"
-            >
-              <Users className="w-3.5 h-3.5 text-[#F4B52E]" />
-              <span className="max-w-[130px] truncate">{currentGroup?.name || 'Office Chai Group'}</span>
-              <ChevronDown className="w-3 h-3 text-[#EAD1B2]" />
-            </button>
+          {/* Group Selector Dropdown (Shown only when logged in) */}
+          {isLoggedIn && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowGroupMenu(!showGroupMenu);
+                  setShowUserMenu(false);
+                  setShowNotifMenu(false);
+                }}
+                className="hidden md:flex items-center space-x-1.5 bg-black/60 hover:bg-black/80 backdrop-blur-md text-[#FFF4DF] px-3 py-1.5 rounded-full border border-[#F4B52E]/50 text-xs font-semibold transition-all shadow-lg cursor-pointer"
+              >
+                <Users className="w-3.5 h-3.5 text-[#F4B52E]" />
+                <span className="max-w-[130px] truncate">{currentGroup?.name || 'Office Chai Group'}</span>
+                <ChevronDown className="w-3 h-3 text-[#EAD1B2]" />
+              </button>
 
-            {showGroupMenu && (
-              <div className="absolute -right-[70px] md:right-0 mt-2 w-64 max-w-[calc(100vw-20px)] bg-[#FFF9ED] text-[#2B211B] rounded-2xl shadow-2xl border border-[#E6D2B5] py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
-                <div className="px-3.5 py-1 text-[11px] font-bold text-[#8C6042] uppercase tracking-wider border-b border-[#EEDFCA]">
-                  My Chai Circles
+              {showGroupMenu && (
+                <div className="absolute -right-[70px] md:right-0 mt-2 w-64 max-w-[calc(100vw-20px)] bg-[#FFF9ED] text-[#2B211B] rounded-2xl shadow-2xl border border-[#E6D2B5] py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="px-3.5 py-1 text-[11px] font-bold text-[#8C6042] uppercase tracking-wider border-b border-[#EEDFCA]">
+                    My Chai Circles
+                  </div>
+                  {groups.map((grp) => (
+                    <button
+                      key={grp._id}
+                      onClick={() => {
+                        onSelectGroup?.(grp._id);
+                        setShowGroupMenu(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-[#F4E3C7] cursor-pointer"
+                    >
+                      <span>{grp.name}</span>
+                      {currentGroup?._id === grp._id && <Check className="w-3.5 h-3.5 text-[#5C8B55]" />}
+                    </button>
+                  ))}
+                  <div className="border-t border-[#EEDFCA] mt-1 pt-1">
+                    <button
+                      onClick={() => {
+                        setShowGroupMenu(false);
+                        onOpenCreateGroup?.();
+                      }}
+                      className="w-full text-left px-3.5 py-2 text-xs text-[#9E4D1A] font-bold hover:bg-[#F4E3C7] flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create or Join Group</span>
+                    </button>
+                  </div>
                 </div>
-                {groups.map((grp) => (
-                  <button
-                    key={grp._id}
-                    onClick={() => {
-                      onSelectGroup?.(grp._id);
-                      setShowGroupMenu(false);
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-[#F4E3C7] cursor-pointer"
-                  >
-                    <span>{grp.name}</span>
-                    {currentGroup?._id === grp._id && <Check className="w-3.5 h-3.5 text-[#5C8B55]" />}
-                  </button>
-                ))}
-                <div className="border-t border-[#EEDFCA] mt-1 pt-1">
-                  <button
-                    onClick={() => {
-                      setShowGroupMenu(false);
-                      onOpenCreateGroup?.();
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-xs text-[#9E4D1A] font-bold hover:bg-[#F4E3C7] flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Create New Group</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Notifications Bell */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowNotifMenu(!showNotifMenu);
-                setShowUserMenu(false);
-                setShowGroupMenu(false);
-                if (!showNotifMenu) onMarkNotificationsRead?.();
-              }}
-              className="relative p-1.5 sm:p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-[#FFF4DF] border border-[#F4B52E]/50 transition-all shadow-lg cursor-pointer"
-              title="Notifications"
-            >
-              <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#F4B52E]" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-black">
-                  {unreadCount}
-                </span>
               )}
-            </button>
+            </div>
+          )}
 
-            {showNotifMenu && renderNotificationsDropdown()}
-          </div>
+          {/* Notifications Bell (Shown only when logged in) */}
+          {isLoggedIn && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowNotifMenu(!showNotifMenu);
+                  setShowUserMenu(false);
+                  setShowGroupMenu(false);
+                  if (!showNotifMenu) onMarkNotificationsRead?.();
+                }}
+                className="relative p-1.5 sm:p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-[#FFF4DF] border border-[#F4B52E]/50 transition-all shadow-lg cursor-pointer"
+                title="Notifications"
+              >
+                <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#F4B52E]" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-black">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
 
-          {/* User Profile */}
-          <div className="relative">
+              {showNotifMenu && renderNotificationsDropdown()}
+            </div>
+          )}
+
+          {/* User Profile or Create Account / Login Button */}
+          {isLoggedIn ? (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowUserMenu(!showUserMenu);
+                  setShowNotifMenu(false);
+                  setShowGroupMenu(false);
+                }}
+                className="flex items-center space-x-2 bg-black/60 hover:bg-black/80 backdrop-blur-md p-1 pr-3 rounded-full border border-[#F4B52E]/50 transition-all shadow-lg cursor-pointer"
+                title={`${currentUser?.name || 'User'}'s Profile`}
+              >
+                <div className="relative w-7 h-7 rounded-full overflow-hidden ring-1 ring-[#F4B52E] bg-[#F4B52E]">
+                  <Image
+                    src={avatarSrc}
+                    alt={currentUser?.name || 'User'}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+                <span className="text-xs font-bold text-[#FFF4DF] hidden sm:inline-block">
+                  {currentUser?.name || 'User'}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-[#EAD1B2] transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showUserMenu && renderProfileDropdown()}
+            </div>
+          ) : (
             <button
-              onClick={() => {
-                setShowUserMenu(!showUserMenu);
-                setShowNotifMenu(false);
-                setShowGroupMenu(false);
-              }}
-              className="flex items-center space-x-2 bg-black/60 hover:bg-black/80 backdrop-blur-md p-1 pr-3 rounded-full border border-[#F4B52E]/50 transition-all shadow-lg cursor-pointer"
-              title="Rahul's Profile"
+              onClick={onOpenAuthModal}
+              className="flex items-center gap-1.5 bg-[#F4B52E] hover:bg-[#E0A220] active:scale-95 text-[#281308] font-black text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-lg border border-[#F4B52E] transition-all cursor-pointer"
+              title="Customer Registration / Login"
             >
-              <div className="relative w-7 h-7 rounded-full overflow-hidden ring-1 ring-[#F4B52E] bg-[#F4B52E]">
-                <Image
-                  src={avatarSrc}
-                  alt={currentUser?.name || 'Rahul'}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              </div>
-              <span className="text-xs font-bold text-[#FFF4DF] hidden sm:inline-block">
-                {currentUser?.name || 'Rahul'}
-              </span>
-              <ChevronDown className={`w-3 h-3 text-[#EAD1B2] transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+              <UserIcon className="w-3.5 h-3.5 text-[#281308]" />
+              <span className="tracking-wide">Create Account</span>
             </button>
-
-            {showUserMenu && renderProfileDropdown()}
-          </div>
+          )}
         </div>
       </div>
     </header>

@@ -13,6 +13,7 @@ interface SidebarProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   unreadCount?: number;
+  isLoggedIn?: boolean;
   onCreateGroup?: () => void;
   onOpenNotifications?: () => void;
 }
@@ -21,19 +22,28 @@ export default function Sidebar({
   activeTab = 'dashboard',
   onTabChange,
   unreadCount = 3,
+  isLoggedIn = false,
   onCreateGroup,
   onOpenNotifications,
 }: SidebarProps) {
-  const topMenuItems = [
+  const loggedInTopItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home, action: () => onTabChange?.('dashboard') },
     { id: 'groups', label: 'My Groups', icon: Users, action: () => onTabChange?.('groups') },
     { id: 'create', label: 'Create Group', icon: SquarePlus, action: onCreateGroup },
     { id: 'join', label: 'Join Group', icon: UserPlus, action: onCreateGroup },
   ];
 
-  const bottomMenuItems = [
-    { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadCount, action: onOpenNotifications },
+  const loggedOutTopItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Home, action: () => onTabChange?.('dashboard') },
   ];
+
+  const topMenuItems = isLoggedIn ? loggedInTopItems : loggedOutTopItems;
+
+  const bottomMenuItems = isLoggedIn
+    ? [
+        { id: 'notifications', label: 'Notifications', icon: Bell, badge: unreadCount, action: onOpenNotifications },
+      ]
+    : [];
 
   const renderMenuItem = (item: {
     id: string;
@@ -72,32 +82,66 @@ export default function Sidebar({
     <aside className="hidden xl:flex flex-col justify-between w-60 h-screen max-h-screen bg-[#361D0D] text-[#FFF4DF] border-r border-[#4A2813] shadow-2xl shrink-0 fixed top-0 left-0 bottom-0 select-none z-30 overflow-hidden">
       {/* Navigation Menu */}
       <nav className="px-3.5 pt-4 pb-2 space-y-1 w-full shrink-0">
-        {/* Top Group: Dashboard, My Groups, Create Group, Join Group */}
+        {/* Top Group: Dashboard (or All options when Logged In) */}
         <div className="space-y-1">
           {topMenuItems.map(renderMenuItem)}
         </div>
 
-        {/* Subtle Horizontal Divider Line */}
-        <div className="py-2">
-          <div className="border-b border-[#4A2813]/80 mx-1" />
-        </div>
+        {/* When Not Logged In: Cozy Tapri Welcome Info Card to fill the empty space beautifully */}
+        {!isLoggedIn && (
+          <div className="pt-3 px-0.5 space-y-2">
+            <div className="p-3.5 rounded-2xl bg-[#261206]/90 border border-[#F4B52E]/30 shadow-md">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-base">☕</span>
+                <span className="font-kalam text-xs font-bold text-[#F4B52E] tracking-wide">
+                  Office Chai Adda
+                </span>
+              </div>
+              <p className="text-[11px] text-[#E0CDBC] leading-relaxed">
+                Roz ki chai duty baanto, bills ka hisaab rakho, aur tapri par charcha karo!
+              </p>
+              
+              <div className="mt-2.5 pt-2 border-t border-[#4A2813]/70 space-y-1.5 text-[10.5px] text-[#F3E1CF]/90">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#F4B52E] font-bold">✓</span>
+                  <span>Daily Host Rotation</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#F4B52E] font-bold">✓</span>
+                  <span>Duty Swap & Shift</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#F4B52E] font-bold">✓</span>
+                  <span>Monthly Chai Kharcha</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Bottom Group: Notifications (with red badge 3), Settings */}
-        <div className="space-y-1">
-          {bottomMenuItems.map(renderMenuItem)}
-        </div>
+        {/* When Logged In: Show Horizontal Divider & Notifications */}
+        {isLoggedIn && bottomMenuItems.length > 0 && (
+          <>
+            <div className="py-2">
+              <div className="border-b border-[#4A2813]/80 mx-1" />
+            </div>
+            <div className="space-y-1">
+              {bottomMenuItems.map(renderMenuItem)}
+            </div>
+          </>
+        )}
       </nav>
 
       {/* Bottom Section: Full Cutting Chai Glass Artwork + Kodetri Technologies Badge at the Bottom */}
-      <div className="relative w-full flex-1 min-h-[160px] flex flex-col justify-end overflow-hidden">
-        {/* Top Fade Gradient for seamless melt from dark sidebar background into artwork */}
-        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-[#361D0D] via-[#361D0D]/65 to-transparent z-10 pointer-events-none" />
+      <div className="relative w-full h-[380px] sm:h-[400px] shrink-0 mt-auto flex flex-col justify-end overflow-hidden">
+        {/* Subtle Top Melt Gradient (kept thin and translucent so the text is 100% sharp and clear) */}
+        <div className="absolute top-0 inset-x-0 h-10 bg-gradient-to-b from-[#361D0D] via-[#361D0D]/40 to-transparent z-10 pointer-events-none" />
 
-        {/* The Golden Hour Cutting Chai Glass Artwork - Centered right on the glass cup! */}
+        {/* The Golden Hour Cutting Chai Glass Artwork - 'Chai Pe Charcha Always!' text and glass cup both crisp and visible */}
         <img
           src="/images/Chai%20Pe%20Charcha%20at%20Golden%20Hour.png"
           alt="Chai Pe Charcha at Golden Hour"
-          className="absolute inset-0 w-full h-full object-cover object-[center_46%] pointer-events-none select-none"
+          className="absolute inset-0 w-full h-full object-cover object-[center_12%] pointer-events-none select-none"
         />
 
         {/* Bottom Vignette gradient behind badge for sharp contrast & legibility */}
