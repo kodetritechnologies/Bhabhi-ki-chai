@@ -128,35 +128,56 @@ body {
 }
 
 /* Authentic Chai-Themed Custom Scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #B87333 #F6ECDD;
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: #F5E7D3;
 }
 
-::-webkit-scrollbar-track {
-  background: #F6ECDD;
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #BF6E32 0%, #9B4C1A 100%);
   border-radius: 9999px;
+  border: 2px solid #F5E7D3;
+  box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #B87333;
-  border-radius: 9999px;
-  border: 2px solid #F6ECDD;
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: #7A350E;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #8E4413;
+html::-webkit-scrollbar-thumb:active,
+body::-webkit-scrollbar-thumb:active,
+::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background: #542207;
 }
 
-::-webkit-scrollbar-thumb:active {
-  background: #5E2606;
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: #F5E7D3;
 }
 
-::-webkit-scrollbar-corner {
-  background: transparent;
+/* Firefox Only Fallback */
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #9B4C1A #F5E7D3;
+  }
 }
