@@ -73,6 +73,15 @@ export async function generateScheduleForGroup(
   }
 
   const todayStr = formatDateKey(new Date());
+  const startKey = formatDateKey(startDate);
+  const existingDocs = await DutyAssignment.find({
+    groupId: group._id,
+    dutyDate: { $gte: startKey },
+  })
+    .select('dutyDate')
+    .lean();
+  const existingDates = new Set(existingDocs.map((d) => d.dutyDate));
+
   const newAssignments: Partial<IDutyAssignment>[] = [];
   const currentDate = new Date(startDate);
 
@@ -82,12 +91,11 @@ export async function generateScheduleForGroup(
     const dateKey = formatDateKey(currentDate);
 
     // Skip if already assigned in DB
-    const exists = await DutyAssignment.exists({ groupId: group._id, dutyDate: dateKey });
-    if (!exists) {
+    if (!existingDates.has(dateKey)) {
       // Check if it's a working day and not a holiday
       if (workingDays.has(dayOfWeek) && !holidays.has(dateKey)) {
         const assignedMember = members[nextMemberIndex % members.length];
-        
+
         let initialStatus: 'upcoming' | 'pending' = 'upcoming';
         if (dateKey === todayStr) {
           initialStatus = 'pending';
@@ -116,10 +124,10 @@ export async function generateScheduleForGroup(
     } catch {
       // Duplicate key or concurrent insert handled cleanly
     }
+    return DutyAssignment.find({ groupId: group._id })
+      .populate('assignedUserId', 'name avatar email')
+      .sort({ dutyDate: 1 });
   }
 
-  // Return upcoming duties
-  return DutyAssignment.find({ groupId: group._id })
-    .populate('assignedUserId', 'name avatar email')
-    .sort({ dutyDate: 1 });
+  return [];
 }

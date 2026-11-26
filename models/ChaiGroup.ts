@@ -15,6 +15,7 @@ export interface IChaiGroup extends Document {
   };
   rotationPolicy: 'move_to_end' | 'retain_turn';
   status: 'active' | 'archived';
+  isDefault?: boolean;
   currency: string;
   bannerImage?: string;
   inviteCode: string;
@@ -38,6 +39,7 @@ const ChaiGroupSchema = new Schema<IChaiGroup>(
     },
     rotationPolicy: { type: String, default: 'move_to_end' },
     status: { type: String, enum: ['active', 'archived'], default: 'active' },
+    isDefault: { type: Boolean, default: false },
     currency: { type: String, default: 'INR' },
     bannerImage: { type: String, default: '' },
     inviteCode: { type: String, unique: true, index: true },

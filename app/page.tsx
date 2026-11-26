@@ -56,6 +56,7 @@ interface DashboardData {
     description?: string;
     role: string;
     inviteCode?: string;
+    workingDays?: number[];
   };
   members?: Array<{
     userId: {
@@ -88,6 +89,8 @@ interface DashboardData {
     name: string;
     description?: string;
     role: 'admin' | 'member';
+    isDefault?: boolean;
+    canDelete?: boolean;
     memberCount: number;
     workingDaysCount: number;
     bannerImage?: string;
@@ -125,6 +128,9 @@ export default function ChaiManagerDashboard() {
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false);
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
   // Fetch Dashboard Data
   const fetchDashboardData = useCallback(async (groupId?: string, userEmail?: string) => {
@@ -138,6 +144,16 @@ export default function ChaiManagerDashboard() {
       const url = queryStr ? `/api/dashboard?${queryStr}` : '/api/dashboard';
       const res = await fetch(url);
       const json = await res.json();
+      if (json.userNotFound) {
+        setLoggedInUser(null);
+        setIsDemoPreview(false);
+        setSelectedGroupId('');
+        try {
+          localStorage.removeItem('bhabhi_chai_user');
+        } catch {
+          // ignore
+        }
+      }
       if (json.success) {
         setData(json);
         if (json.currentGroup?._id) {
@@ -156,24 +172,37 @@ export default function ChaiManagerDashboard() {
     async function initDashboard() {
       try {
         // Check if user is saved in localStorage
-        let savedEmail: string | undefined;
+        let savedUser: { _id: string; name: string; email: string; avatar: string } | null = null;
         try {
           const stored = localStorage.getItem('bhabhi_chai_user');
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed && parsed.email) {
-              setLoggedInUser(parsed);
-              savedEmail = parsed.email;
+              savedUser = parsed;
             }
           }
         } catch {
           // ignore localStorage parsing errors
         }
 
-        const url = savedEmail ? `/api/dashboard?userEmail=${encodeURIComponent(savedEmail)}` : '/api/dashboard';
+        const url = savedUser
+          ? `/api/dashboard?userEmail=${encodeURIComponent(savedUser.email)}`
+          : '/api/dashboard';
         const res = await fetch(url);
         const json = await res.json();
         if (!ignore && json.success) {
+          if (json.userNotFound) {
+            setLoggedInUser(null);
+            setIsDemoPreview(false);
+            setSelectedGroupId('');
+            try {
+              localStorage.removeItem('bhabhi_chai_user');
+            } catch {
+              // ignore
+            }
+          } else if (savedUser) {
+            setLoggedInUser(savedUser);
+          }
           setData(json);
           if (json.currentGroup?._id) {
             setSelectedGroupId(json.currentGroup._id);
@@ -196,23 +225,25 @@ export default function ChaiManagerDashboard() {
   const handleLoginSuccess = (user: { _id: string; name: string; email: string; avatar: string }) => {
     setLoggedInUser(user);
     setIsDemoPreview(false);
+    setSelectedGroupId('');
     try {
       localStorage.setItem('bhabhi_chai_user', JSON.stringify(user));
     } catch {
       // ignore
     }
-    fetchDashboardData(selectedGroupId, user.email);
+    fetchDashboardData('', user.email);
   };
 
   const handleLogout = () => {
     setLoggedInUser(null);
     setIsDemoPreview(false);
+    setSelectedGroupId('');
     try {
       localStorage.removeItem('bhabhi_chai_user');
     } catch {
       // ignore
     }
-    fetchDashboardData(selectedGroupId, undefined);
+    fetchDashboardData('', undefined);
   };
 
   const openCustomerAuthModal = () => {
@@ -223,6 +254,28 @@ export default function ChaiManagerDashboard() {
   const handleSelectGroup = (grpId: string) => {
     setSelectedGroupId(grpId);
     fetchDashboardData(grpId, loggedInUser?.email);
+  };
+
+  const handleDeleteGroup = async (grpId: string) => {
+    try {
+      const email = loggedInUser?.email || data?.currentUser?.email || '';
+      const res = await fetch(
+        `/api/groups?groupId=${encodeURIComponent(grpId)}&userEmail=${encodeURIComponent(email)}`,
+        { method: 'DELETE' }
+      );
+      const json = await res.json();
+      if (json.success) {
+        const nextGroupId = grpId === selectedGroupId ? '' : selectedGroupId;
+        if (grpId === selectedGroupId) {
+          setSelectedGroupId('');
+        }
+        await fetchDashboardData(nextGroupId, loggedInUser?.email);
+      } else {
+        console.error(json.error || 'Failed to delete group');
+      }
+    } catch (err) {
+      console.error('Error deleting group:', err);
+    }
   };
 
   const handleMarkNotificationsRead = async () => {
@@ -245,11 +298,11 @@ export default function ChaiManagerDashboard() {
     if (tab === 'history') {
       setIsHistoryModalOpen(true);
     } else if (tab === 'calendar') {
-      const el = document.getElementById('calendar-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('calendar-section')?.scrollIntoView({ behavior: 'smooth' });
     } else if (tab === 'groups') {
-      const el = document.getElementById('groups-section');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('groups-section')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (tab === 'notifications') {
+      document.getElementById('notifications-section')?.scrollIntoView({ behavior: 'smooth' });
     } else if (tab === 'home') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -277,12 +330,12 @@ export default function ChaiManagerDashboard() {
     currentGroup,
     members = [],
     todayDuty,
-    lastBillAmount = 100,
+    lastBillAmount = 0,
     stats = {
-      myGroupsCount: 3,
-      chaiDaysThisMonth: 12,
-      totalExpenses: 800,
-      groupActiveRate: '100%',
+      myGroupsCount: 0,
+      chaiDaysThisMonth: 0,
+      totalExpenses: 0,
+      groupActiveRate: '0%',
     },
     calendarDuties = [],
     upcomingSchedule = [],
@@ -294,18 +347,16 @@ export default function ChaiManagerDashboard() {
 
   return (
     <div className="min-h-screen flex flex-row bg-[#FBE5CC] text-[#2B211B] antialiased overflow-x-hidden">
-      {/* 1. LEFT SIDEBAR (Desktop - Matching desktop-mockup.jpg 1:1) */}
+      {/* 1. LEFT SIDEBAR (Desktop - Opens Modals for Sections, /admin for Admin Page) */}
       <Sidebar
         activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'create') setIsCreateGroupModalOpen(true);
-          if (tab === 'notifications') setIsHistoryModalOpen(true);
-        }}
+        onTabChange={(tab) => setActiveTab(tab)}
         unreadCount={unreadNotificationsCount}
         isLoggedIn={!!loggedInUser}
-        onCreateGroup={() => setIsCreateGroupModalOpen(true)}
-        onOpenNotifications={() => setIsHistoryModalOpen(true)}
+        onOpenGroups={() => setIsGroupsModalOpen(true)}
+        onOpenCalendar={() => setIsCalendarModalOpen(true)}
+        onOpenHistory={() => setIsHistoryModalOpen(true)}
+        onOpenNotifications={() => setIsNotificationsModalOpen(true)}
       />
 
       {/* 2. MAIN CONTENT COLUMN (Spanning full height and width next to sidebar) */}
@@ -396,6 +447,7 @@ export default function ChaiManagerDashboard() {
                   calendarDuties={calendarDuties}
                   upcomingSchedule={upcomingSchedule}
                   members={members}
+                  workingDays={currentGroup?.workingDays}
                   onOpenSwap={() => setIsSwapModalOpen(true)}
                 />
               </div>
@@ -407,9 +459,10 @@ export default function ChaiManagerDashboard() {
               <div className="md:col-span-12 xl:col-span-5">
                 <MyGroupsSection
                   groups={groups}
-                  currentGroupId={currentGroup?._id}
+                  currentGroupId={selectedGroupId || currentGroup?._id}
                   onSelectGroup={handleSelectGroup}
                   onCreateGroup={() => setIsCreateGroupModalOpen(true)}
+                  onDeleteGroup={handleDeleteGroup}
                 />
               </div>
 
@@ -422,7 +475,7 @@ export default function ChaiManagerDashboard() {
               </div>
 
               {/* Card 3: Notifications */}
-              <div className="md:col-span-6 xl:col-span-3">
+              <div id="notifications-section" className="md:col-span-6 xl:col-span-3">
                 <NotificationsCard
                   notifications={notifications}
                   onClearNotifications={handleMarkNotificationsRead}
@@ -477,11 +530,142 @@ export default function ChaiManagerDashboard() {
 
       <HistoryModal
         isOpen={isHistoryModalOpen}
-        onClose={() => setIsHistoryModalOpen(false)}
+        onClose={() => {
+          setIsHistoryModalOpen(false);
+          setActiveTab('dashboard');
+        }}
         activities={recentActivity}
         totalExpenses={stats.totalExpenses}
         totalChaiDays={stats.chaiDaysThisMonth}
       />
+
+      {/* My Groups Modal */}
+      {isGroupsModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          onClick={() => {
+            setIsGroupsModalOpen(false);
+            setActiveTab('dashboard');
+          }}
+        >
+          <div
+            className="relative w-full max-w-3xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsGroupsModalOpen(false);
+                  setActiveTab('dashboard');
+                }}
+                className="px-3 py-1 rounded-full bg-[#3B1B0D] hover:bg-[#522915] text-[#FFF4DF] font-bold text-xs flex items-center gap-1.5 border border-[#F4B52E]/50 shadow-lg cursor-pointer"
+                aria-label="Close groups modal"
+              >
+                <span>Close</span>
+                <span>✕</span>
+              </button>
+            </div>
+            <div className="max-h-[82vh] overflow-y-auto rounded-3xl shadow-2xl">
+              <MyGroupsSection
+                groups={groups}
+                currentGroupId={selectedGroupId || currentGroup?._id}
+                onSelectGroup={(id) => {
+                  handleSelectGroup(id);
+                  setIsGroupsModalOpen(false);
+                  setActiveTab('dashboard');
+                }}
+                onCreateGroup={() => {
+                  setIsGroupsModalOpen(false);
+                  setIsCreateGroupModalOpen(true);
+                }}
+                onDeleteGroup={handleDeleteGroup}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chai Calendar Modal */}
+      {isCalendarModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          onClick={() => {
+            setIsCalendarModalOpen(false);
+            setActiveTab('dashboard');
+          }}
+        >
+          <div
+            className="relative w-full max-w-4xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCalendarModalOpen(false);
+                  setActiveTab('dashboard');
+                }}
+                className="px-3 py-1 rounded-full bg-[#3B1B0D] hover:bg-[#522915] text-[#FFF4DF] font-bold text-xs flex items-center gap-1.5 border border-[#F4B52E]/50 shadow-lg cursor-pointer"
+                aria-label="Close calendar modal"
+              >
+                <span>Close</span>
+                <span>✕</span>
+              </button>
+            </div>
+            <div className="max-h-[82vh] overflow-y-auto rounded-3xl shadow-2xl">
+              <ChaiCalendar
+                currentGroupId={currentGroup?._id}
+                calendarDuties={calendarDuties}
+                upcomingSchedule={upcomingSchedule}
+                members={members}
+                workingDays={currentGroup?.workingDays}
+                onOpenSwap={() => {
+                  setIsCalendarModalOpen(false);
+                  setIsSwapModalOpen(true);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Modal */}
+      {isNotificationsModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          onClick={() => {
+            setIsNotificationsModalOpen(false);
+            setActiveTab('dashboard');
+          }}
+        >
+          <div
+            className="relative w-full max-w-lg flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNotificationsModalOpen(false);
+                  setActiveTab('dashboard');
+                }}
+                className="px-3 py-1 rounded-full bg-[#3B1B0D] hover:bg-[#522915] text-[#FFF4DF] font-bold text-xs flex items-center gap-1.5 border border-[#F4B52E]/50 shadow-lg cursor-pointer"
+                aria-label="Close notifications modal"
+              >
+                <span>Close</span>
+                <span>✕</span>
+              </button>
+            </div>
+            <div className="max-h-[82vh] overflow-y-auto rounded-3xl shadow-2xl">
+              <NotificationsCard
+                notifications={notifications}
+                onClearNotifications={handleMarkNotificationsRead}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

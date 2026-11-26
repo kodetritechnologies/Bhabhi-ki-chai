@@ -20,10 +20,10 @@ interface MetricsRowProps {
 
 export default function MetricsRow({
   stats = {
-    myGroupsCount: 3,
-    chaiDaysThisMonth: 12,
-    totalExpenses: 800,
-    groupActiveRate: '100%',
+    myGroupsCount: 0,
+    chaiDaysThisMonth: 0,
+    totalExpenses: 0,
+    groupActiveRate: '0%',
   },
   onManageGroups,
   onOpenCalendar,
@@ -96,7 +96,7 @@ export default function MetricsRow({
           {/* Value & Label */}
           <div className="flex flex-col justify-center min-w-0">
             <span className="font-extrabold text-[22px] sm:text-[33px] text-[#140F0B] tracking-tight leading-none">
-              ₹{stats.totalExpenses}
+              ₹{stats.totalExpenses.toLocaleString('en-IN')}
             </span>
             <span className="text-[11px] sm:text-[13px] font-semibold text-[#54433A] leading-tight mt-0.5 sm:mt-1 whitespace-nowrap">
               Total Expenses

@@ -65,11 +65,21 @@ export async function seedInitialData(force = false) {
 
   const [rahul, amit, sandeep, vikas, pooja] = users;
 
-  // 2. Create Groups
+  // Create Admin User for Default Groups
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@bhabhikichai.com').trim().toLowerCase();
+  const adminUser = await User.create({
+    name: 'Tapri Admin',
+    email: adminEmail,
+    avatar: '/images/default-avatar.png',
+    timezone: 'Asia/Kolkata',
+  });
+
+  // 2. Create Default Groups (owned by Admin)
   const officeGroup = await ChaiGroup.create({
     name: 'Office Chai Group',
     description: 'Daily cutting chai & tech charcha with the core team',
-    createdBy: rahul._id,
+    createdBy: adminUser._id,
+    isDefault: true,
     timezone: 'Asia/Kolkata',
     workingDays: [1, 2, 3, 4, 5, 6], // Mon-Sat
     chaiTime: '10:30 AM',
@@ -84,7 +94,8 @@ export async function seedInitialData(force = false) {
   const friendsGroup = await ChaiGroup.create({
     name: 'Friends Chai Group',
     description: 'Sham ki tapri baazi with old college buddies',
-    createdBy: rahul._id,
+    createdBy: adminUser._id,
+    isDefault: true,
     timezone: 'Asia/Kolkata',
     workingDays: [0, 1, 2, 3, 4, 5, 6], // 7 Days/Week
     chaiTime: '05:30 PM',
@@ -99,7 +110,8 @@ export async function seedInitialData(force = false) {
   const weekendGroup = await ChaiGroup.create({
     name: 'Weekend Chai',
     description: 'Special Irani chai and bun maska on Saturday & Sunday',
-    createdBy: rahul._id,
+    createdBy: adminUser._id,
+    isDefault: true,
     timezone: 'Asia/Kolkata',
     workingDays: [0, 6], // 2 Days/Week: Sat, Sun
     chaiTime: '09:00 AM',

@@ -6,6 +6,7 @@ import {
   LuCalendar as Calendar,
   LuUsers as Users,
   LuHistory as History,
+  LuBell as Bell,
 } from 'react-icons/lu';
 
 interface MobileBottomNavProps {
@@ -19,9 +20,10 @@ export default function MobileBottomNav({
 }: MobileBottomNavProps) {
   const tabs = [
     { id: 'home', label: 'Home', icon: Home },
+    { id: 'groups', label: 'Groups', icon: Users },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'groups', label: 'My Groups', icon: Users },
     { id: 'history', label: 'History', icon: History },
+    { id: 'notifications', label: 'Alerts', icon: Bell },
   ];
 
   return (
@@ -33,6 +35,7 @@ export default function MobileBottomNav({
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => onTabChange(tab.id)}
               className={`flex flex-col items-center justify-center py-1 px-1.5 sm:px-2.5 rounded-xl transition-all min-w-[48px] sm:min-w-[56px] min-h-[44px] sm:min-h-[48px] cursor-pointer ${
                 isActive

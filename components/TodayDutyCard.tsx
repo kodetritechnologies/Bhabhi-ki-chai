@@ -59,11 +59,10 @@ export default function TodayDutyCard({
   status = 'pending',
   totalMembers = 4,
   lastBill = 100,
-  isUserDuty = false,
   onMarkCompleted,
 }: TodayDutyCardProps) {
   const isCompleted = status === 'completed';
-  const userName = isUserDuty ? 'You' : assignedUser?.name || 'Rahul';
+  const userName = assignedUser?.name || 'Rahul';
   const displayDate = formatDisplayDate(dutyDateStr);
 
   return (

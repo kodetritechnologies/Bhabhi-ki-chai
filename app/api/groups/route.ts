@@ -4,6 +4,7 @@ import { ChaiGroup } from '@/models/ChaiGroup';
 import { GroupMember } from '@/models/GroupMember';
 import { User } from '@/models/User';
 import { DutyAssignment } from '@/models/DutyAssignment';
+import { ChaiEntry } from '@/models/ChaiEntry';
 import { AuditLog } from '@/models/AuditLog';
 import { Notification } from '@/models/Notification';
 import { generateScheduleForGroup, formatDateKey } from '@/lib/rotationEngine';
@@ -229,6 +230,77 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     const err = error as Error;
     console.error('Error creating group:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    await connectToDatabase();
+    const { searchParams } = new URL(request.url);
+    let groupId = searchParams.get('groupId') || '';
+    let userEmail = searchParams.get('userEmail') || '';
+
+    if (!groupId) {
+      try {
+        const body = await request.json();
+        groupId = body.groupId || '';
+        userEmail = userEmail || body.userEmail || '';
+      } catch {
+        // ignore empty body
+      }
+    }
+
+    if (!groupId) {
+      return NextResponse.json({ success: false, error: 'Group ID is required' }, { status: 400 });
+    }
+
+    if (!userEmail) {
+      return NextResponse.json({ success: false, error: 'Login required to delete a group' }, { status: 401 });
+    }
+
+    const currentUser = await User.findOne({ email: userEmail.trim().toLowerCase() });
+    if (!currentUser) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    const group = await ChaiGroup.findById(groupId);
+    if (!group) {
+      return NextResponse.json({ success: false, error: 'Group not found' }, { status: 404 });
+    }
+
+    const DEFAULT_INVITE_CODES = ['CHAI-OFFICE-99', 'CHAI-DOST-77', 'CHAI-WKND-22'];
+    if (group.isDefault || DEFAULT_INVITE_CODES.includes(group.inviteCode || '')) {
+      return NextResponse.json(
+        { success: false, error: 'Default group delete nahi kiya ja sakta' },
+        { status: 403 }
+      );
+    }
+
+    const isCreator = group.createdBy?.toString() === currentUser._id.toString();
+    if (!isCreator) {
+      return NextResponse.json(
+        { success: false, error: 'Sirf aapke banaye hue groups hi delete ho sakte hain' },
+        { status: 403 }
+      );
+    }
+
+    await Promise.all([
+      GroupMember.deleteMany({ groupId: group._id }),
+      DutyAssignment.deleteMany({ groupId: group._id }),
+      ChaiEntry.deleteMany({ groupId: group._id }),
+      AuditLog.deleteMany({ groupId: group._id }),
+      Notification.deleteMany({ groupId: group._id }),
+      ChaiGroup.findByIdAndDelete(group._id),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      message: `'${group.name}' group delete ho gaya!`,
+    });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error('Error deleting group:', err);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

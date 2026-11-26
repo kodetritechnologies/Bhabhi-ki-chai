@@ -23,8 +23,8 @@ export default function HistoryModal({
   isOpen,
   onClose,
   activities = [],
-  totalExpenses = 800,
-  totalChaiDays = 12,
+  totalExpenses = 0,
+  totalChaiDays = 0,
 }: HistoryModalProps) {
   if (!isOpen) return null;
 

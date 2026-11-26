@@ -30,15 +30,11 @@ export interface ChaiCalendarProps {
   calendarDuties?: CalendarDuty[];
   upcomingSchedule?: CalendarDuty[];
   members?: Member[];
+  workingDays?: number[];
   onOpenSwap?: () => void;
 }
 
-const DEFAULT_MEMBERS = [
-  { name: 'Rahul', color: '#4B7BEC' },
-  { name: 'Amit', color: '#73984E' },
-  { name: 'Sandeep', color: '#E84393' },
-  { name: 'Vikas', color: '#FA8231' },
-];
+const FALLBACK_COLORS = ['#4B7BEC', '#73984E', '#E84393', '#FA8231', '#20BF6B', '#8854D0'];
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -46,6 +42,14 @@ const MONTH_NAMES = [
 ];
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function parseLocalDate(dateStr: string): Date {
+  const parts = dateStr.split('T')[0].split('-');
+  if (parts.length === 3) {
+    return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  }
+  return new Date(dateStr);
+}
 
 function formatDateKey(date: Date): string {
   const y = date.getFullYear();
@@ -67,37 +71,26 @@ export default function ChaiCalendar({
   calendarDuties = [],
   upcomingSchedule = [],
   members = [],
+  workingDays = [1, 2, 3, 4, 5, 6],
   onOpenSwap,
 }: ChaiCalendarProps) {
-  // Mockup base date: Tuesday, November 24, 2026
-  const [activeDate, setActiveDate] = useState<Date>(new Date(2026, 10, 24));
-  const [selectedDateKey, setSelectedDateKey] = useState<string>('2026-11-24');
-  const [highlightMember, setHighlightMember] = useState<string | null>(null);
+  const todayKey = formatDateKey(new Date());
+  const [activeDate, setActiveDate] = useState<Date>(() => new Date());
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey);
 
-  // Resolved members list for legend & duty assignment fallbacks
+  // Resolved members list for legend from actual group members
   const resolvedMembers = useMemo(() => {
-    if (members && members.length > 0) {
-      return members.map((m, idx) => ({
-        id: m.userId?._id || `m-${idx}`,
-        name: m.userId?.name || DEFAULT_MEMBERS[idx % DEFAULT_MEMBERS.length].name,
-        color: m.color || DEFAULT_MEMBERS[idx % DEFAULT_MEMBERS.length].color,
-      }));
-    }
-    return DEFAULT_MEMBERS.map((m, idx) => ({
-      id: `m-${idx}`,
-      name: m.name,
-      color: m.color,
+    if (!members || members.length === 0) return [];
+    return members.map((m, idx) => ({
+      id: m.userId?._id || `m-${idx}`,
+      name: m.userId?.name || 'Member',
+      color: m.color || FALLBACK_COLORS[idx % FALLBACK_COLORS.length],
     }));
   }, [members]);
 
   // Fast color lookup map
   const memberColorMap = useMemo(() => {
-    const map: Record<string, string> = {
-      rahul: '#4B7BEC',
-      amit: '#73984E',
-      sandeep: '#E84393',
-      vikas: '#FA8231',
-    };
+    const map: Record<string, string> = {};
     resolvedMembers.forEach((m) => {
       map[m.name.toLowerCase()] = m.color;
       if (m.id) map[m.id] = m.color;
@@ -121,75 +114,28 @@ export default function ChaiCalendar({
     const monday = getMonday(activeDate);
     const grid = [];
 
-    // Base sequence reference for fallback rotation (Nov 23, 2026 is Monday)
-    const baseRef = new Date(2026, 10, 23).getTime();
-    const dayMs = 24 * 60 * 60 * 1000;
-
     for (let i = 0; i < 14; i++) {
       const dayDate = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
       const dateKey = formatDateKey(dayDate);
       const dayOfWeek = dayDate.getDay(); // 0 = Sun, 6 = Sat
       const isSunday = dayOfWeek === 0;
       const isWeekend = isSunday || dayOfWeek === 6;
-      const isToday = dateKey === '2026-11-24' || dateKey === formatDateKey(new Date());
+      const isToday = dateKey === todayKey;
 
-      // Check DB duties first
+      // Read directly from DB duties
       const duty = dutyByDate[dateKey];
       let assignedName = '';
       let dotColor: string | null = null;
+      let status = '';
 
       if (duty) {
         assignedName = duty.assignedUserId?.name || 'Assigned';
+        status = duty.status || 'upcoming';
         dotColor =
           duty.memberColor ||
           memberColorMap[assignedName.toLowerCase()] ||
           memberColorMap[duty.assignedUserId?._id || ''] ||
           '#4B7BEC';
-      } else {
-        // Dynamic fallback round-robin so the calendar is ALWAYS filled across months
-        const daysDiff = Math.round((dayDate.getTime() - baseRef) / dayMs);
-
-        // Curated mockup sequence for matching user image 1:1 in Nov-Dec 2026:
-        // Day 23: Rahul (#4B7BEC)
-        // Day 24: Rahul (Today circle)
-        // Day 25: Amit (#73984E)
-        // Day 26: Amit (#73984E)
-        // Day 27: Rahul (#4B7BEC)
-        // Day 28: Sandeep (#E84393)
-        // Day 29: Vikas (#45AAF2 / #FA8231)
-        // Day 30: Rahul (#4B7BEC)
-        // Day 1: Amit (#20BF6B)
-        // Day 2: Sandeep (#E84393)
-        // Day 3: Rahul (#4B7BEC)
-        // Day 4: Amit (#73984E)
-        // Day 5: Amit (#20BF6B)
-        // Day 6: Rahul (#4B7BEC)
-        const mockupDots: Record<string, { name: string; color: string }> = {
-          '2026-11-23': { name: 'Rahul', color: '#4B7BEC' },
-          '2026-11-24': { name: 'Rahul', color: '#4B7BEC' },
-          '2026-11-25': { name: 'Amit', color: '#73984E' },
-          '2026-11-26': { name: 'Amit', color: '#73984E' },
-          '2026-11-27': { name: 'Rahul', color: '#4B7BEC' },
-          '2026-11-28': { name: 'Sandeep', color: '#E84393' },
-          '2026-11-29': { name: 'Vikas', color: '#45AAF2' },
-          '2026-11-30': { name: 'Rahul', color: '#4B7BEC' },
-          '2026-12-01': { name: 'Amit', color: '#20BF6B' },
-          '2026-12-02': { name: 'Sandeep', color: '#E84393' },
-          '2026-12-03': { name: 'Rahul', color: '#4B7BEC' },
-          '2026-12-04': { name: 'Amit', color: '#73984E' },
-          '2026-12-05': { name: 'Amit', color: '#20BF6B' },
-          '2026-12-06': { name: 'Rahul', color: '#4B7BEC' },
-        };
-
-        if (mockupDots[dateKey]) {
-          assignedName = mockupDots[dateKey].name;
-          dotColor = mockupDots[dateKey].color;
-        } else if (!isSunday && resolvedMembers.length > 0) {
-          const rotationIdx = Math.abs(daysDiff) % resolvedMembers.length;
-          const assigned = resolvedMembers[rotationIdx];
-          assignedName = assigned.name;
-          dotColor = assigned.color;
-        }
       }
 
       grid.push({
@@ -201,6 +147,7 @@ export default function ChaiCalendar({
         isSunday,
         assignedName,
         dotColor,
+        status,
       });
     }
 
@@ -209,40 +156,68 @@ export default function ChaiCalendar({
     const monthYear = `${MONTH_NAMES[midDate.getMonth()]} ${midDate.getFullYear()}`;
 
     return { calendarGrid: grid, displayedMonthYear: monthYear };
-  }, [activeDate, dutyByDate, resolvedMembers, memberColorMap]);
+  }, [activeDate, dutyByDate, memberColorMap, todayKey]);
 
-  // Dynamic Upcoming Schedule items (5 days from tomorrow)
+  // Selected date details for mobile & desktop tap feedback
+  const selectedDayDetails = useMemo(() => {
+    const dateObj = parseLocalDate(selectedDateKey);
+    const duty = dutyByDate[selectedDateKey];
+    const assignedName = duty?.assignedUserId?.name || '';
+    const dotColor = assignedName
+      ? duty?.memberColor ||
+        memberColorMap[assignedName.toLowerCase()] ||
+        memberColorMap[duty?.assignedUserId?._id || ''] ||
+        '#4B7BEC'
+      : null;
+
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+
+    return {
+      dateKey: selectedDateKey,
+      isToday: selectedDateKey === todayKey,
+      formattedDate,
+      assignedName,
+      dotColor,
+      status: duty?.status || '',
+    };
+  }, [selectedDateKey, dutyByDate, memberColorMap, todayKey]);
+
+  // Dynamic off-days note from group workingDays
+  const offDaysNote = useMemo(() => {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const offDays = [0, 1, 2, 3, 4, 5, 6].filter((d) => !workingDays.includes(d));
+    if (offDays.length === 0) return 'Chai Every Day!';
+    if (offDays.length === 1) return `No Chai on ${dayNames[offDays[0]]}`;
+    if (offDays.length === 2) return `No Chai on ${dayNames[offDays[0]].slice(0, 3)} & ${dayNames[offDays[1]].slice(0, 3)}`;
+    return `${workingDays.length} Chai Days / Week`;
+  }, [workingDays]);
+
+  // Dynamic Upcoming Schedule items (next 5 duties from DB)
   const dynamicUpcoming = useMemo(() => {
-    if (upcomingSchedule && upcomingSchedule.length >= 3) {
-      return upcomingSchedule.slice(0, 5).map((item) => {
-        const itemDate = new Date(item.dutyDate);
-        const name = item.assignedUserId?.name || 'Member';
-        const dateStr = itemDate.toLocaleDateString('en-US', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-        });
-        const color =
-          item.memberColor ||
-          memberColorMap[name.toLowerCase()] ||
-          memberColorMap[item.assignedUserId?._id || ''] ||
-          '#73984E';
-        return {
-          dateStr,
-          name,
-          dotColor: color,
-        };
+    if (!upcomingSchedule || upcomingSchedule.length === 0) return [];
+    return upcomingSchedule.slice(0, 5).map((item) => {
+      const itemDate = parseLocalDate(item.dutyDate);
+      const name = item.assignedUserId?.name || 'Member';
+      const dateStr = itemDate.toLocaleDateString('en-US', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
       });
-    }
-
-    // Default 1:1 match to mockup schedule
-    return [
-      { dateStr: 'Tue, 25 Nov', name: 'Amit', dotColor: '#73984E' },
-      { dateStr: 'Wed, 26 Nov', name: 'Sandeep', dotColor: '#E84393' },
-      { dateStr: 'Thu, 27 Nov', name: 'Vikas', dotColor: '#FA8231' },
-      { dateStr: 'Fri, 28 Nov', name: 'Rahul', dotColor: '#4B7BEC' },
-      { dateStr: 'Sat, 29 Nov', name: 'Amit', dotColor: '#73984E' },
-    ];
+      const color =
+        item.memberColor ||
+        memberColorMap[name.toLowerCase()] ||
+        memberColorMap[item.assignedUserId?._id || ''] ||
+        '#73984E';
+      return {
+        dateStr,
+        name,
+        dotColor: color,
+      };
+    });
   }, [upcomingSchedule, memberColorMap]);
 
   // Navigate 2 weeks earlier
@@ -257,9 +232,9 @@ export default function ChaiCalendar({
 
   // Quick jump back to today
   const handleToday = () => {
-    setActiveDate(new Date(2026, 10, 24));
-    setSelectedDateKey('2026-11-24');
-    setHighlightMember(null);
+    const now = new Date();
+    setActiveDate(now);
+    setSelectedDateKey(formatDateKey(now));
   };
 
   return (
@@ -321,8 +296,8 @@ export default function ChaiCalendar({
 
       {/* Main Grid: Left = Dynamic Calendar Grid, Right = Sticky Note Upcoming Schedule */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-5 items-stretch flex-1">
-        {/* Left Side: Calendar Matrix & Legend (md:col-span-7) */}
-        <div className="md:col-span-7 flex flex-col justify-between h-full">
+        {/* Left Side: Calendar Matrix & Selected Date Card (md:col-span-7) */}
+        <div className="md:col-span-7 flex flex-col justify-center h-full">
           <div>
             {/* Month Header with < > buttons */}
             <div className="flex items-center justify-center gap-6 py-1 mb-1 text-sm font-bold text-[#1C1006]">
@@ -365,34 +340,41 @@ export default function ChaiCalendar({
 
               <div className="grid grid-cols-7 gap-y-2.5 text-center relative z-10 py-1">
                 {calendarGrid.map((item, idx) => {
-                  const isDimmed = highlightMember && item.assignedName !== highlightMember;
                   const isDaySelected = selectedDateKey === item.dateKey;
+                  const isCompleted = item.status === 'completed';
 
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={idx}
                       onClick={() => setSelectedDateKey(item.dateKey)}
-                      className={`flex flex-col items-center justify-center min-h-[38px] cursor-pointer transition-all duration-150 ${
-                        isDimmed ? 'opacity-30' : 'opacity-100'
-                      }`}
+                      className="group flex flex-col items-center justify-center min-h-[42px] cursor-pointer transition-all duration-150"
                       title={
                         item.assignedName
                           ? `${item.date.toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
                               day: 'numeric',
-                            })}: ${item.assignedName}`
+                            })}: ${item.assignedName}${isCompleted ? ' (Completed)' : ''}`
                           : `${item.date.toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
                               day: 'numeric',
-                            })}`
+                            })} (Off Day)`
                       }
                     >
                       {item.isToday ? (
                         <div
-                          className={`w-7 h-7 rounded-full bg-[#FBB03B] text-[#1A0E06] font-bold text-xs flex items-center justify-center shadow-sm transition-transform ${
-                            isDaySelected ? 'ring-2 ring-[#4A2412]' : ''
+                          className={`w-7 h-7 rounded-full font-bold text-xs flex items-center justify-center shadow-sm transition-all ${
+                            isCompleted
+                              ? 'bg-[#279958] text-white'
+                              : 'bg-[#FBB03B] text-[#1A0E06]'
+                          } ${
+                            isDaySelected
+                              ? isCompleted
+                                ? 'ring-2 ring-[#14532D] ring-offset-1 ring-offset-[#FAF6EE] scale-105'
+                                : 'ring-2 ring-[#3B1B0D] ring-offset-1 ring-offset-[#FAF6EE] scale-105'
+                              : 'group-hover:scale-105'
                           }`}
                         >
                           {item.dayNumber}
@@ -400,51 +382,77 @@ export default function ChaiCalendar({
                       ) : (
                         <>
                           <span
-                            className={`text-xs font-semibold leading-tight ${
-                              isDaySelected
-                                ? 'text-[#C96B3B] font-bold underline'
-                                : 'text-[#24140A]'
+                            className={`w-7 h-7 rounded-full text-xs font-semibold flex items-center justify-center transition-all ${
+                              isCompleted
+                                ? isDaySelected
+                                  ? 'bg-[#1E7E45] text-white font-bold shadow-xs scale-105 ring-2 ring-[#14532D]/40'
+                                  : 'bg-[#D1F2DF] text-[#135E35] border border-[#7ED4A3] font-bold group-hover:bg-[#BCEAD0]'
+                                : isDaySelected
+                                  ? 'bg-[#3B1B0D] text-[#FFF9ED] font-bold shadow-xs scale-105'
+                                  : 'text-[#24140A] group-hover:bg-[#EFE3D2]/80'
                             }`}
                           >
                             {item.dayNumber}
                           </span>
-                          {item.dotColor && (
+                          {item.dotColor ? (
                             <span
-                              className="w-1.5 h-1.5 rounded-full mt-1 shrink-0 transition-transform hover:scale-125"
+                              className="w-1.5 h-1.5 rounded-full mt-0.5 shrink-0 transition-transform group-hover:scale-125"
                               style={{ backgroundColor: item.dotColor }}
                             />
+                          ) : (
+                            <span className="w-1.5 h-1.5 mt-0.5 opacity-0" />
                           )}
-                          {!item.dotColor && <span className="w-1.5 h-1.5 mt-1 opacity-0" />}
                         </>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>
             </div>
-          </div>
 
-          {/* Members Color Legend (Horizontal) */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-3 mt-2 border-t border-[#EFE3D2]/60 text-xs font-medium text-[#241308]">
-            {resolvedMembers.map((m) => {
-              const isSelected = highlightMember === m.name;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setHighlightMember(isSelected ? null : m.name)}
-                  className={`flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isSelected ? 'font-bold underline' : 'hover:opacity-80'
+            {/* Selected Date Duty Card (Tapri-styled for Desktop & Mobile) */}
+            <div className="mt-3 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-[#FFF8EA] to-[#FDECA6]/55 border border-[#EAD7B7] shadow-[0_2px_8px_rgba(74,36,18,0.04)] flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/80 shadow-xs"
+                  style={{
+                    backgroundColor: selectedDayDetails.assignedName
+                      ? selectedDayDetails.dotColor || '#4B7BEC'
+                      : '#CBB9A1',
+                  }}
+                />
+                <div className="flex items-baseline gap-1.5 min-w-0 truncate">
+                  <span className="text-[11px] sm:text-xs font-semibold text-[#6D533E] shrink-0">
+                    {selectedDayDetails.formattedDate}
+                    {selectedDayDetails.isToday ? ' · Today' : ''}
+                  </span>
+                  <span className="text-[#B8A28A] text-xs shrink-0">•</span>
+                  {selectedDayDetails.assignedName ? (
+                    <span className="font-kalam text-sm sm:text-[15px] font-bold text-[#1C1006] truncate leading-none">
+                      {selectedDayDetails.assignedName}
+                    </span>
+                  ) : (
+                    <span className="font-kalam text-xs sm:text-sm font-semibold text-[#8A735E] truncate leading-none">
+                      Off Day (No Chai)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {selectedDayDetails.assignedName && selectedDayDetails.status && (
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize shrink-0 border ${
+                    selectedDayDetails.status === 'completed'
+                      ? 'bg-[#E2F6EB] text-[#146C3B] border-[#B7E4CA]'
+                      : selectedDayDetails.status === 'skipped'
+                        ? 'bg-[#FCE4E4] text-[#9E2A2B] border-[#F5C2C2]'
+                        : 'bg-[#FDB933]/25 text-[#6E3B0C] border-[#F4C973]'
                   }`}
-                  title={`Filter days assigned to ${m.name}`}
                 >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: m.color }}
-                  />
-                  <span>{m.name}</span>
-                </button>
-              );
-            })}
+                  {selectedDayDetails.status}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -480,32 +488,38 @@ export default function ChaiCalendar({
 
               {/* Lined Items List */}
               <div className="space-y-1.5 pt-1">
-                {dynamicUpcoming.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between text-xs sm:text-[13px] text-[#24140A] py-0.5 border-b border-[#F5E296]/70 last:border-none"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: item.dotColor }}
-                      />
-                      <span className="font-medium">{item.dateStr}</span>
+                {dynamicUpcoming.length === 0 ? (
+                  <p className="text-xs text-[#6D533E] py-3 text-center font-medium">
+                    No upcoming duties scheduled
+                  </p>
+                ) : (
+                  dynamicUpcoming.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between text-xs sm:text-[13px] text-[#24140A] py-0.5 border-b border-[#F5E296]/70 last:border-none"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: item.dotColor }}
+                        />
+                        <span className="font-medium">{item.dateStr}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[#6D533E] font-medium">—</span>
+                        <span className="font-bold text-[#1E1107] min-w-[55px] text-left">
+                          {item.name}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#6D533E] font-medium">—</span>
-                      <span className="font-bold text-[#1E1107] min-w-[55px] text-left">
-                        {item.name}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
-            {/* Note on bottom of paper: No Chai on Sunday ☺ */}
+            {/* Dynamic off-days note on bottom of paper */}
             <div className="mt-6 pt-2 pb-4 mb-2 text-center font-kalam text-xs sm:text-[13px] text-[#24140A] font-bold flex items-center justify-center gap-1.5 leading-none">
-              <span>No Chai on Sunday</span>
+              <span>{offDaysNote}</span>
               <svg
                 className="w-3.5 h-3.5 text-[#24140A] inline-block shrink-0"
                 viewBox="0 0 24 24"
