@@ -29,11 +29,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Development OTP is fixed to 1234
     return NextResponse.json({
       success: true,
-      message: 'OTP safaltapoorvak bhej diya gaya hai! (Dev OTP: 1234)',
-      devOtp: '1234',
+      message: 'OTP safaltapoorvak bhej diya gaya hai!',
       email: cleanEmail,
     });
   } catch (err: unknown) {

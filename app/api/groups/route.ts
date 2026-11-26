@@ -42,12 +42,7 @@ export async function GET(request: Request) {
     const memberships = await GroupMember.find({ userId: currentUser._id, status: 'active' }).lean();
     const groupIds = memberships.map((m) => m.groupId);
 
-    let groups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
-
-    // If user has no active groups yet, return active groups available to join/view
-    if (groups.length === 0) {
-      groups = await ChaiGroup.find({ status: 'active' }).limit(4).lean();
-    }
+    const groups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
 
     const todayStr = formatDateKey(new Date());
 

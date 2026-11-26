@@ -5,7 +5,7 @@ import { GroupMember } from '@/models/GroupMember';
 import { User } from '@/models/User';
 import { AuditLog } from '@/models/AuditLog';
 import { Notification } from '@/models/Notification';
-import { generateScheduleForGroup } from '@/lib/rotationEngine';
+import { rebalanceUpcomingSchedule } from '@/lib/rotationEngine';
 
 const MEMBER_COLORS = ['#3B82F6', '#10B981', '#EC4899', '#F97316', '#8B5CF6', '#EAB308'];
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
         // Reactivate membership
         existingMembership.status = 'active';
         await existingMembership.save();
-        await generateScheduleForGroup(group._id, 30);
+        await rebalanceUpcomingSchedule(group._id, 30);
         return NextResponse.json({
           success: true,
           message: `Aapki '${group.name}' me membership punah active ho gayi!`,
@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     });
 
     // 6. Update future schedule to incorporate the new member in rotation
-    await generateScheduleForGroup(group._id, 30);
+    await rebalanceUpcomingSchedule(group._id, 30);
 
     // 7. Audit log & Notification
     await AuditLog.create({

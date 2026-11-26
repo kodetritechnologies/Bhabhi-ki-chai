@@ -216,7 +216,7 @@ export default function TapriHeader({
             No new notifications
           </div>
         ) : (
-          notifications.map((n) => (
+          notifications.slice(0, 4).map((n) => (
             <div key={n._id} className="p-3 sm:p-3.5 text-xs hover:bg-[#FAF0E1] transition-colors">
               <div className="flex items-start justify-between gap-2">
                 <p className="font-bold text-[#3B1B0D] leading-snug">{n.title}</p>

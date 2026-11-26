@@ -67,7 +67,7 @@ export default function GuestWelcomeView({
           {/* Security & Convenience Note */}
           <p className="text-[11px] text-[#8C6D54] font-medium mt-4 flex items-center justify-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-            <span>Dev OTP: <code>1234</code> • No password hassle • 10-second setup</span>
+            <span>Instant OTP login • No password hassle • 10-second setup</span>
           </p>
         </div>
       </div>
@@ -145,7 +145,7 @@ export default function GuestWelcomeView({
             </span>
             <h4 className="font-bold text-sm text-[#FFF4DF] mb-1">Account Banayein</h4>
             <p className="text-xs text-[#CDB29B]">
-              Apna naam aur email dalein. Dev OTP <code>1234</code> se turant login karein.
+              Apna naam aur email dalein aur 4-digit OTP se turant login karein.
             </p>
           </div>
 

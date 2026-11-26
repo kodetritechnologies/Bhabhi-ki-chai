@@ -2,9 +2,13 @@
 
 import React from 'react';
 
-export default function FooterRibbon() {
+export default function FooterRibbon({ hasBottomNav = false }: { hasBottomNav?: boolean }) {
   return (
-    <footer className="relative w-full mt-1 sm:mt-4 mb-[46px] xl:mb-0 select-none overflow-hidden bg-transparent leading-none">
+    <footer
+      className={`relative w-full mt-1 sm:mt-4 ${
+        hasBottomNav ? 'mb-[46px] xl:mb-0' : 'mb-0'
+      } select-none overflow-hidden bg-transparent leading-none`}
+    >
       {/* 1. Mobile Banner: Proportionally Designed for Mobile Screens */}
       <div className="block sm:hidden w-full relative z-10 leading-none">
         <img

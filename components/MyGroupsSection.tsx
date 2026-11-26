@@ -10,6 +10,7 @@ import {
   LuChevronLeft as ChevronLeft,
   LuChevronRight as ChevronRight,
   LuTrash2 as Trash2,
+  LuPencil as Pencil,
 } from 'react-icons/lu';
 
 export interface GroupCardData {
@@ -35,6 +36,7 @@ interface MyGroupsSectionProps {
   currentGroupId?: string;
   onSelectGroup?: (id: string) => void;
   onCreateGroup?: () => void;
+  onEditGroup?: (id: string) => void;
   onDeleteGroup?: (id: string) => Promise<void> | void;
 }
 
@@ -43,6 +45,7 @@ export default function MyGroupsSection({
   currentGroupId,
   onSelectGroup,
   onCreateGroup,
+  onEditGroup,
   onDeleteGroup,
 }: MyGroupsSectionProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -174,15 +177,15 @@ export default function MyGroupsSection({
 
                     {/* Role / Default Badge */}
                     <span
-                      className={`absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md ${
+                      className={`absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide border shadow-sm backdrop-blur-md ${
                         grp.isDefault
-                          ? 'bg-[#F4B52E] text-[#281308] shadow-[#F4B52E]/30'
+                          ? 'bg-[#F4B52E]/95 text-[#281308] border-[#FFE08A]/60'
                           : grp.role === 'admin'
-                            ? 'bg-[#10B981] text-white shadow-[#10B981]/30'
-                            : 'bg-[#3B82F6] text-white shadow-[#3B82F6]/30'
+                            ? 'bg-[#1A0B04]/80 text-[#F4B52E] border-[#F4B52E]/50'
+                            : 'bg-[#1A0B04]/75 text-[#EAD3B8] border-[#8B5A3C]/50'
                       }`}
                     >
-                      {grp.isDefault ? 'Default' : grp.role}
+                      {grp.isDefault ? 'Default' : grp.role === 'admin' ? 'Admin' : 'Member'}
                     </span>
 
                     {/* Active Indicator Pin */}
@@ -229,20 +232,36 @@ export default function MyGroupsSection({
                         <span />
                       )}
 
-                      {grp.canDelete && onDeleteGroup && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmDeleteId(grp._id);
-                          }}
-                          className="p-1 rounded-md text-[#FCA5A5]/80 hover:text-[#EF4444] hover:bg-[#EF4444]/15 transition-colors cursor-pointer shrink-0"
-                          title={`Delete ${grp.name}`}
-                          aria-label={`Delete ${grp.name}`}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      )}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {grp.canDelete && onEditGroup && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditGroup(grp._id);
+                            }}
+                            className="p-1 rounded-md text-[#F4B52E]/80 hover:text-[#F4B52E] hover:bg-[#F4B52E]/15 transition-colors cursor-pointer shrink-0"
+                            title={`Edit ${grp.name}`}
+                            aria-label={`Edit ${grp.name}`}
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                        )}
+                        {grp.canDelete && onDeleteGroup && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteId(grp._id);
+                            }}
+                            className="p-1 rounded-md text-[#FCA5A5]/80 hover:text-[#EF4444] hover:bg-[#EF4444]/15 transition-colors cursor-pointer shrink-0"
+                            title={`Delete ${grp.name}`}
+                            aria-label={`Delete ${grp.name}`}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 

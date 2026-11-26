@@ -13,6 +13,7 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 
 import CompleteDutyModal from '@/components/modals/CompleteDutyModal';
 import CreateGroupModal from '@/components/modals/CreateGroupModal';
+import EditGroupModal from '@/components/modals/EditGroupModal';
 import SwapDutyModal from '@/components/modals/SwapDutyModal';
 import HistoryModal from '@/components/modals/HistoryModal';
 import CustomerAuthModal from '@/components/modals/CustomerAuthModal';
@@ -126,6 +127,8 @@ export default function ChaiManagerDashboard() {
   // Modal States
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [createGroupInitialTab, setCreateGroupInitialTab] = useState<'create' | 'join'>('create');
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false);
@@ -280,13 +283,19 @@ export default function ChaiManagerDashboard() {
 
   const handleMarkNotificationsRead = async () => {
     try {
-      await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAll: true }),
-      });
+      if (loggedInUser?.email) {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ markAll: true, userEmail: loggedInUser.email }),
+        });
+      }
       if (data) {
-        setData({ ...data, unreadNotificationsCount: 0 });
+        setData({
+          ...data,
+          unreadNotificationsCount: 0,
+          notifications: (data.notifications || []).map((n) => ({ ...n, read: true })),
+        });
       }
     } catch (err) {
       console.error(err);
@@ -386,6 +395,42 @@ export default function ChaiManagerDashboard() {
             }}
             onExploreDemo={() => setIsDemoPreview(true)}
           />
+        ) : loggedInUser && groups.length === 0 ? (
+          <main className="flex-1 max-w-[900px] w-full mx-auto px-4 sm:px-6 py-10 sm:py-16 flex items-center justify-center">
+            <div className="w-full bg-[#FFF7EA] border-2 border-[#E2BA82] rounded-3xl p-6 sm:p-10 shadow-xl text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#F4CF96] border border-[#DEB578] flex items-center justify-center text-3xl shadow-sm">
+                ☕
+              </div>
+              <h2 className="font-kalam text-2xl sm:text-3xl font-bold text-[#3B1D0E] mb-2">
+                Swagat hai, {loggedInUser.name}!
+              </h2>
+              <p className="text-sm sm:text-base text-[#6E492D] max-w-lg mx-auto mb-6">
+                Abhi aap kisi bhi private Chai Circle me nahi hain. Apni office team ya doston ke liye ek naya group banayein, ya invite code se apna group join karein.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateGroupInitialTab('create');
+                    setIsCreateGroupModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#1C140E] hover:bg-[#331E12] text-[#FFF4DF] font-bold text-sm shadow-md transition-all cursor-pointer"
+                >
+                  + Create New Chai Circle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateGroupInitialTab('join');
+                    setIsCreateGroupModalOpen(true);
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-[#F4CF96] hover:bg-[#EBC07E] text-[#2E180B] border border-[#D4A45E] font-bold text-sm shadow-sm transition-all cursor-pointer"
+                >
+                  Join with Invite Code
+                </button>
+              </div>
+            </div>
+          </main>
         ) : (
           <main className="flex-1 max-w-[1440px] w-full mx-auto px-3 sm:px-6 pt-0 pb-1 xl:pb-1">
             {/* Demo Mode Notice Banner if in demo mode */}
@@ -462,6 +507,7 @@ export default function ChaiManagerDashboard() {
                   currentGroupId={selectedGroupId || currentGroup?._id}
                   onSelectGroup={handleSelectGroup}
                   onCreateGroup={() => setIsCreateGroupModalOpen(true)}
+                  onEditGroup={(id) => setEditingGroupId(id)}
                   onDeleteGroup={handleDeleteGroup}
                 />
               </div>
@@ -486,14 +532,16 @@ export default function ChaiManagerDashboard() {
         )}
 
         {/* Footer Ribbon with Heritage Doodles */}
-        <FooterRibbon />
+        <FooterRibbon hasBottomNav={!!loggedInUser} />
       </div>
 
-      {/* 3. MOBILE BOTTOM NAVIGATION (for small screens) */}
-      <MobileBottomNav
-        activeTab={activeMobileTab}
-        onTabChange={handleMobileTabChange}
-      />
+      {/* 3. MOBILE BOTTOM NAVIGATION (only when logged in) */}
+      {loggedInUser && (
+        <MobileBottomNav
+          activeTab={activeMobileTab}
+          onTabChange={handleMobileTabChange}
+        />
+      )}
 
       {/* 4. MODALS */}
       <CustomerAuthModal
@@ -518,6 +566,15 @@ export default function ChaiManagerDashboard() {
         onClose={() => setIsCreateGroupModalOpen(false)}
         onSuccess={(newId) => handleSelectGroup(newId)}
         userEmail={loggedInUser?.email}
+        initialTab={createGroupInitialTab}
+      />
+
+      <EditGroupModal
+        groupId={editingGroupId}
+        isOpen={!!editingGroupId}
+        onClose={() => setEditingGroupId(null)}
+        onSuccess={() => fetchDashboardData(selectedGroupId, loggedInUser?.email)}
+        userEmail={loggedInUser?.email}
       />
 
       <SwapDutyModal
@@ -534,9 +591,11 @@ export default function ChaiManagerDashboard() {
           setIsHistoryModalOpen(false);
           setActiveTab('dashboard');
         }}
+        groupId={currentGroup?._id}
         activities={recentActivity}
         totalExpenses={stats.totalExpenses}
         totalChaiDays={stats.chaiDaysThisMonth}
+        onPaymentUpdated={() => fetchDashboardData(selectedGroupId, loggedInUser?.email)}
       />
 
       {/* My Groups Modal */}
@@ -578,6 +637,10 @@ export default function ChaiManagerDashboard() {
                 onCreateGroup={() => {
                   setIsGroupsModalOpen(false);
                   setIsCreateGroupModalOpen(true);
+                }}
+                onEditGroup={(id) => {
+                  setIsGroupsModalOpen(false);
+                  setEditingGroupId(id);
                 }}
                 onDeleteGroup={handleDeleteGroup}
               />

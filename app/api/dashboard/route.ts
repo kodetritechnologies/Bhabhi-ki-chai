@@ -101,14 +101,24 @@ function buildDemoDashboardData(requestedGroupId?: string | null) {
     calendarDuties,
     upcomingSchedule,
     groups: demoGroups,
-    recentActivity: [
-      { _id: 'demo-act-1', action: 'Chai Completed', reason: '4 Special Adrak Chai + Toast (₹80)', createdAt: now.toISOString() },
-      { _id: 'demo-act-2', action: 'Duty Assigned', reason: 'Aaj ki chai duty assign ki gayi', createdAt: now.toISOString() },
-    ],
+    recentActivity: Array.from({ length: 12 }, (_, idx) => {
+      const names = ['Rahul', 'Amit', 'Sandeep', 'Vikas'];
+      const d = new Date(now);
+      d.setDate(now.getDate() - idx);
+      return {
+        _id: `demo-act-${idx + 1}`,
+        action: idx % 3 === 0 ? 'Duty Swapped' : 'Chai Completed',
+        reason: `${names[idx % 4]} • 4 Special Adrak Chai + Toast (₹${60 + (idx % 4) * 20})`,
+        createdAt: d.toISOString(),
+      };
+    }),
     notifications: [
       { _id: 'demo-n1', title: 'Chai Time Reminder ☕', message: 'Aaj ki chai duty Rahul ki hai.', read: false, timeAgoText: 'just now' },
+      { _id: 'demo-n2', title: 'Payment Pending 💳', message: 'Amit ka ₹60 bill pending hai.', read: false, timeAgoText: '1h ago' },
+      { _id: 'demo-n3', title: 'Duty Swapped 🔄', message: 'Sandeep aur Vikas ki duty swap hui.', read: false, timeAgoText: '3h ago' },
+      { _id: 'demo-n4', title: 'Chai Completed ✅', message: 'Kal ki chai ₹80 me complete hui.', read: true, timeAgoText: '1d ago' },
     ],
-    unreadNotificationsCount: 1,
+    unreadNotificationsCount: 3,
   };
 }
 
@@ -138,23 +148,13 @@ export async function GET(request: Request) {
     const memberships = await GroupMember.find({ userId: currentUser._id, status: 'active' }).lean();
     const groupIds = memberships.map((m) => m.groupId);
 
-    let allGroups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
-
-    // If user is new and has no groups yet, provide default/existing active groups to view
+    const allGroups = await ChaiGroup.find({ _id: { $in: groupIds }, status: 'active' }).lean();
+    const myGroupsCount = allGroups.length;
     const DEFAULT_INVITE_CODES = ['CHAI-OFFICE-99', 'CHAI-DOST-77', 'CHAI-WKND-22'];
-    if (allGroups.length === 0) {
-      allGroups = await ChaiGroup.find({
-        status: 'active',
-        $or: [{ isDefault: true }, { inviteCode: { $in: DEFAULT_INVITE_CODES } }],
-      }).lean();
-      if (allGroups.length === 0) {
-        allGroups = await ChaiGroup.find({ status: 'active' }).limit(3).lean();
-      }
-    }
 
-    // Determine active group
+    // Determine active group (strictly from groups the user is a member of)
     let currentGroup = requestedGroupId
-      ? (allGroups.find((g) => g._id.toString() === requestedGroupId) || (await ChaiGroup.findById(requestedGroupId).lean()))
+      ? allGroups.find((g) => g._id.toString() === requestedGroupId)
       : allGroups[0];
 
     if (!currentGroup && allGroups.length > 0) {
@@ -162,17 +162,33 @@ export async function GET(request: Request) {
     }
 
     if (!currentGroup) {
+      const notifications = await Notification.find({ userId: currentUser._id })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean();
+      const unreadNotificationsCount = await Notification.countDocuments({
+        userId: currentUser._id,
+        read: false,
+      });
+
       return NextResponse.json({
         success: true,
         currentUser,
+        currentGroup: null,
+        members: [],
+        todayDuty: null,
+        lastBillAmount: 0,
         groups: [],
+        recentActivity: [],
+        notifications,
+        unreadNotificationsCount,
         stats: {
           myGroupsCount: 0,
           chaiDaysThisMonth: 0,
           totalExpenses: 0,
           groupActiveRate: '0%',
         },
-        message: 'No groups found. Create one to begin!',
+        message: 'No groups found. Create or join one to begin!',
       });
     }
 
@@ -323,7 +339,7 @@ export async function GET(request: Request) {
       todayDuty,
       lastBillAmount: lastEntry ? lastEntry.amount : 0,
       stats: {
-        myGroupsCount: allGroups.length,
+        myGroupsCount,
         chaiDaysThisMonth: completedThisMonth,
         totalExpenses: totalExpenseAmount,
         groupActiveRate: `${groupActivePercent}%`,

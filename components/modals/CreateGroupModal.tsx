@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LuX as X,
   LuPlus as Plus,
@@ -19,6 +19,7 @@ interface CreateGroupModalProps {
   onClose: () => void;
   onSuccess?: (groupId: string) => void;
   userEmail?: string;
+  initialTab?: 'create' | 'join';
 }
 
 function to12Hour(time24: string): string {
@@ -73,8 +74,15 @@ export default function CreateGroupModal({
   onClose,
   onSuccess,
   userEmail,
+  initialTab = 'create',
 }: CreateGroupModalProps) {
-  const [activeTab, setActiveTab] = useState<'create' | 'join'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'join'>(initialTab);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   // Create Form State
   const [name, setName] = useState('');

@@ -177,17 +177,16 @@ export default function TodayDutyCard({
               <div className="flex items-center gap-1 sm:gap-1.5 bg-[#F4CF96]/75 border border-[#DEB578]/70 rounded-xl px-1.5 sm:px-2.5 py-1 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)] shrink-0">
                 <Users className="w-3.5 h-3.5 text-[#2E180B] shrink-0" />
                 <div className="leading-tight">
+                  <span className="text-xs font-bold text-[#1A0E06] leading-none block text-center">{totalMembers}</span>
                   <span className="text-[9px] sm:text-[10px] text-[#63432B] font-medium block whitespace-nowrap">Total Members</span>
-                  <span className="text-xs font-bold text-[#1A0E06] leading-none">{totalMembers}</span>
                 </div>
               </div>
 
               {/* Last Bill Pill Box */}
-              <div className="flex items-center gap-1 bg-[#F4CF96]/75 border border-[#DEB578]/70 rounded-xl px-1.5 sm:px-2.5 py-1 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)] shrink-0">
-                <span className="text-[#2E180B] font-bold text-xs leading-none pl-0.5">₹</span>
-                <div className="leading-tight">
+              <div className="flex items-center justify-center bg-[#F4CF96]/75 border border-[#DEB578]/70 rounded-xl px-2 sm:px-3 py-1 shadow-[inset_0_1px_2px_rgba(255,255,255,0.4)] shrink-0">
+                <div className="leading-tight text-center">
+                  <span className="text-xs font-bold text-[#1A0E06] leading-none block">₹{lastBill}</span>
                   <span className="text-[9px] sm:text-[10px] text-[#63432B] font-medium block whitespace-nowrap">Last Bill</span>
-                  <span className="text-xs font-bold text-[#1A0E06] leading-none">₹{lastBill}</span>
                 </div>
               </div>
             </div>

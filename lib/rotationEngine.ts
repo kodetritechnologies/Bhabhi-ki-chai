@@ -131,3 +131,21 @@ export async function generateScheduleForGroup(
 
   return [];
 }
+
+/**
+ * Rebalances future automatic 'upcoming' duties (after today) when group membership changes,
+ * preserving today's duty as well as any completed, skipped, manual, or swapped duties.
+ */
+export async function rebalanceUpcomingSchedule(
+  groupId: string | mongoose.Types.ObjectId,
+  daysAhead: number = 30
+): Promise<IDutyAssignment[]> {
+  const todayStr = formatDateKey(new Date());
+  await DutyAssignment.deleteMany({
+    groupId,
+    dutyDate: { $gt: todayStr },
+    status: 'upcoming',
+    source: 'automatic',
+  });
+  return generateScheduleForGroup(groupId, daysAhead);
+}

@@ -130,7 +130,7 @@ export default function CustomerAuthModal({
         return;
       }
 
-      setSuccessMessage('Account ban gaya! Dev OTP 1234 ke sath login karein.');
+      setSuccessMessage('Account ban gaya! Ab 4-digit OTP daal kar login karein.');
       // Auto move to Login with OTP
       setLoginEmail(regEmail.trim());
       setMode('login');
@@ -171,7 +171,7 @@ export default function CustomerAuthModal({
         return;
       }
 
-      setSuccessMessage(data.message || 'OTP sent! Use 1234');
+      setSuccessMessage(data.message || 'OTP safaltapoorvak bhej diya gaya hai!');
       setLoginStep('otp');
       setOtp(['', '', '', '']);
       setTimeout(() => {
@@ -390,10 +390,6 @@ export default function CustomerAuthModal({
                   </div>
                 </div>
 
-                <div className="p-3 bg-[#F4E3C7]/60 border border-[#DEC2A0] rounded-xl text-[11px] text-[#6A472C]">
-                  💡 <strong>Tip:</strong> Development me kisi bhi registered user (e.g. <code>rahul@example.com</code>, <code>priya@example.com</code>) ke liye OTP <strong>1234</strong> rahega.
-                </div>
-
                 <button
                   type="submit"
                   disabled={loading}
@@ -464,11 +460,6 @@ export default function CustomerAuthModal({
                       />
                     ))}
                   </div>
-                </div>
-
-                {/* Dev Mode Banner */}
-                <div className="p-2.5 bg-[#FFF2D6] border border-[#F4B52E] rounded-xl text-center text-xs text-[#8C4610] font-bold">
-                  🔑 Development Mode OTP: <span className="text-base font-extrabold text-[#3B1B0D] tracking-widest bg-white px-2 py-0.5 rounded-md border border-[#F4B52E]">1234</span>
                 </div>
 
                 <button
