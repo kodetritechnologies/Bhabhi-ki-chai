@@ -103,7 +103,7 @@ export default function Sidebar({
 
         <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-black/85 via-black/45 to-transparent z-10 pointer-events-none" />
 
-        <div className="relative z-20 p-3 w-full">
+        <div className="relative z-20 px-3 pt-3 pb-6 w-full">
           <a
             href="https://kodetri.com/"
             target="_blank"
