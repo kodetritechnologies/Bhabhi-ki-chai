@@ -6,6 +6,8 @@ import { DutyAssignment } from '@/models/DutyAssignment';
 import { ChaiEntry } from '@/models/ChaiEntry';
 import { Notification } from '@/models/Notification';
 import { AuditLog } from '@/models/AuditLog';
+import { Admin } from '@/models/Admin';
+import { hashAdminPassword } from './adminAuth';
 import { formatDateKey } from './rotationEngine';
 
 export async function seedInitialData(force = false) {
@@ -20,6 +22,7 @@ export async function seedInitialData(force = false) {
   if (force) {
     await Promise.all([
       User.deleteMany({}),
+      Admin.deleteMany({}),
       ChaiGroup.deleteMany({}),
       GroupMember.deleteMany({}),
       DutyAssignment.deleteMany({}),
@@ -65,8 +68,20 @@ export async function seedInitialData(force = false) {
 
   const [rahul, amit, sandeep, vikas, pooja] = users;
 
-  // Create Admin User for Default Groups
-  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@bhabhikichai.com').trim().toLowerCase();
+  // Create Admin record in `admins` collection & User record for Default Groups
+  const adminEmail = 'admin@bhabhikichai.com';
+  const existingAdmin = await Admin.findOne({ email: adminEmail });
+  if (!existingAdmin) {
+    const defaultAdminPasswordHash = await hashAdminPassword('admin123');
+    await Admin.create({
+      name: 'Tapri Admin',
+      email: adminEmail,
+      passwordHash: defaultAdminPasswordHash,
+      role: 'super_admin',
+      isActive: true,
+    });
+  }
+
   const adminUser = await User.create({
     name: 'Tapri Admin',
     email: adminEmail,

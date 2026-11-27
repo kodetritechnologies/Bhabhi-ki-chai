@@ -24,6 +24,7 @@ interface PaymentItem {
   amount: number;
   paymentStatus: 'paid' | 'pending' | 'not_recorded';
   note?: string;
+  createdAt?: string | Date;
   paidByUserId?: {
     _id?: string;
     name?: string;
@@ -71,6 +72,44 @@ function formatDateTime(dt?: string | Date): string {
     });
   } catch {
     return '';
+  }
+}
+
+function formatPaymentTime(dt?: string | Date): string {
+  if (!dt) return '';
+  try {
+    return new Date(dt).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function formatDutyDateLabel(dutyDate: string): string {
+  if (!dutyDate) return 'Unknown Date';
+  try {
+    const now = new Date();
+    const toYMD = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const todayStr = toYMD(now);
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const yesterdayStr = toYMD(yesterday);
+
+    const parsed = new Date(`${dutyDate}T00:00:00`);
+    const shortDate = parsed.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: dutyDate.slice(0, 4) !== String(now.getFullYear()) ? 'numeric' : undefined,
+    });
+
+    if (dutyDate === todayStr) return `Today • ${shortDate}`;
+    if (dutyDate === yesterdayStr) return `Yesterday • ${shortDate}`;
+    return shortDate;
+  } catch {
+    return dutyDate;
   }
 }
 
@@ -163,13 +202,15 @@ export default function HistoryModal({
       ];
       const demoPayments: PaymentItem[] = Array.from({ length: 12 }, (_, idx) => {
         const d = new Date();
-        d.setDate(d.getDate() - idx);
+        d.setDate(d.getDate() - Math.floor(idx / 2));
+        d.setHours(18 - (idx % 2) * 5, 30, 0, 0);
         return {
           _id: `demo-p${idx + 1}`,
           dutyDate: d.toISOString().slice(0, 10),
           amount: 50 + (idx % 4) * 20,
           paymentStatus: idx % 3 === 1 ? 'pending' : 'paid',
           note: notes[idx % notes.length],
+          createdAt: d.toISOString(),
           paidByUserId: { name: names[idx % names.length] },
         };
       });
@@ -359,65 +400,129 @@ export default function HistoryModal({
               </div>
             )}
 
-            {/* Payment List */}
-            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+            {/* Payment List (Grouped by Date with Timeline & Order Badge) */}
+            <div className="max-h-64 overflow-y-auto space-y-3 pr-1">
               {payLoading ? (
                 <p className="text-center text-xs text-gray-500 py-8">Payments load ho rahe hain...</p>
               ) : payItems.length === 0 ? (
                 <p className="text-center text-xs text-gray-500 py-6">Koi payment record nahi mila</p>
               ) : (
-                payItems.map((p) => {
-                  const isPending = p.paymentStatus === 'pending';
-                  return (
-                    <div
-                      key={p._id}
-                      className="p-2.5 rounded-xl bg-[#FAF2E4] border border-[#E8DAC2] text-xs flex items-center justify-between gap-2"
-                    >
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                            isPending
-                              ? 'bg-[#F59E0B]/20 text-[#D97706]'
-                              : 'bg-[#10B981]/20 text-[#059669]'
-                          }`}
-                        >
-                          {isPending ? <Clock className="w-3.5 h-3.5" /> : <Rupee className="w-3.5 h-3.5" />}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-[#3B1B0D]">
-                              {p.paidByUserId?.name || 'Member'}
-                            </span>
-                            <span className="text-[10px] text-[#8C6042]">• {p.dutyDate}</span>
-                          </div>
-                          {p.note && (
-                            <p className="text-[11px] text-gray-600 break-words mt-0.5">{p.note}</p>
-                          )}
-                        </div>
+                (() => {
+                  const grouped: Array<{
+                    date: string;
+                    totalAmount: number;
+                    entries: Array<{ item: PaymentItem; orderNumber: number }>;
+                  }> = [];
+
+                  payItems.forEach((p, idx) => {
+                    const orderNumber = Math.max(1, payTotalCount - ((payPage - 1) * PAGE_SIZE + idx));
+                    const dateKey = p.dutyDate || 'unknown';
+                    const existing = grouped.find((g) => g.date === dateKey);
+                    if (existing) {
+                      existing.entries.push({ item: p, orderNumber });
+                      existing.totalAmount += p.amount || 0;
+                    } else {
+                      grouped.push({
+                        date: dateKey,
+                        totalAmount: p.amount || 0,
+                        entries: [{ item: p, orderNumber }],
+                      });
+                    }
+                  });
+
+                  return grouped.map((group) => (
+                    <div key={group.date} className="space-y-1.5">
+                      {/* Date Separator Header */}
+                      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-[#F2E5D3]/95 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-[#DFC39B]">
+                        <span className="text-[11px] font-bold text-[#3B1B0D] flex items-center gap-1.5">
+                          <span>📅</span>
+                          {formatDutyDateLabel(group.date)}
+                        </span>
+                        <span className="text-[10px] font-bold text-[#734A29]">
+                          {group.entries.length} {group.entries.length === 1 ? 'payment' : 'payments'} • ₹{group.totalAmount}
+                        </span>
                       </div>
 
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span className="font-mono font-extrabold text-sm text-[#3B1B0D]">
-                          ₹{p.amount}
-                        </span>
-                        {isPending ? (
-                          <button
-                            type="button"
-                            disabled={isDemo || updatingId === p._id}
-                            onClick={() => handleMarkPaid(p._id)}
-                            className="px-2 py-0.5 rounded-md bg-[#F59E0B] hover:bg-[#D97706] text-white text-[10px] font-bold cursor-pointer disabled:opacity-60"
-                          >
-                            {updatingId === p._id ? 'Saving...' : 'Mark Paid'}
-                          </button>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-[#10B981]/15 text-[#059669] text-[10px] font-bold">
-                            Paid
-                          </span>
-                        )}
+                      {/* Timeline Entries for this Date */}
+                      <div className="relative pl-3.5 space-y-2 border-l-2 border-[#DFC39B] ml-2">
+                        {group.entries.map(({ item: p, orderNumber }) => {
+                          const isPending = p.paymentStatus === 'pending';
+                          const timeLabel = formatPaymentTime(p.createdAt);
+                          const isFirstEver = orderNumber === 1;
+
+                          return (
+                            <div
+                              key={p._id}
+                              className="relative p-2.5 rounded-xl bg-[#FAF2E4] border border-[#E8DAC2] text-xs flex items-center justify-between gap-2"
+                            >
+                              {/* Timeline Dot */}
+                              <span
+                                className={`absolute -left-[21px] top-4 w-2.5 h-2.5 rounded-full border-2 border-[#FFF9ED] ${
+                                  isPending ? 'bg-[#F59E0B]' : 'bg-[#10B981]'
+                                }`}
+                              />
+
+                              <div className="flex items-start gap-2.5 min-w-0">
+                                <div
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                                    isPending
+                                      ? 'bg-[#F59E0B]/20 text-[#D97706]'
+                                      : 'bg-[#10B981]/20 text-[#059669]'
+                                  }`}
+                                >
+                                  {isPending ? <Clock className="w-3.5 h-3.5" /> : <Rupee className="w-3.5 h-3.5" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span
+                                      className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md border ${
+                                        isFirstEver
+                                          ? 'bg-[#F4B52E]/30 text-[#8C4610] border-[#F4B52E]'
+                                          : 'bg-[#EFE2CE] text-[#6E492D] border-[#DFC39B]'
+                                      }`}
+                                      title="Payment order (1 = sabse pehle)"
+                                    >
+                                      #{orderNumber}{isFirstEver ? ' • Sabse Pehle' : ''}
+                                    </span>
+                                    <span className="font-bold text-[#3B1B0D]">
+                                      {p.paidByUserId?.name || 'Member'}
+                                    </span>
+                                    {timeLabel && (
+                                      <span className="text-[10px] text-[#8C6042]">• {timeLabel}</span>
+                                    )}
+                                  </div>
+                                  {p.note && (
+                                    <p className="text-[11px] text-gray-600 break-words mt-0.5">{p.note}</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <span className="font-mono font-extrabold text-sm text-[#3B1B0D]">
+                                  ₹{p.amount}
+                                </span>
+                                {isPending ? (
+                                  <button
+                                    type="button"
+                                    disabled={isDemo || updatingId === p._id}
+                                    onClick={() => handleMarkPaid(p._id)}
+                                    className="px-2 py-0.5 rounded-md bg-[#F59E0B] hover:bg-[#D97706] text-white text-[10px] font-bold cursor-pointer disabled:opacity-60"
+                                  >
+                                    {updatingId === p._id ? 'Saving...' : 'Mark Paid'}
+                                  </button>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-md bg-[#10B981]/15 text-[#059669] text-[10px] font-bold">
+                                    Paid
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })
+                  ));
+                })()
               )}
             </div>
 

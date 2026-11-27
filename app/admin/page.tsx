@@ -20,6 +20,8 @@ import {
   LuArrowLeft as ArrowLeft,
   LuX as X,
   LuClock as Clock,
+  LuChevronLeft as ChevronLeft,
+  LuChevronRight as ChevronRight,
 } from 'react-icons/lu';
 
 interface AdminStats {
@@ -92,6 +94,16 @@ const WEEKDAY_LABELS = [
   { num: 0, label: 'Sun' },
 ];
 
+function to12Hour(time24: string): string {
+  if (!time24 || !time24.includes(':')) return time24;
+  const [hStr, mStr] = time24.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+}
+
 function formatDateTime(dt?: string): string {
   if (!dt) return '';
   try {
@@ -106,12 +118,63 @@ function formatDateTime(dt?: string): string {
   }
 }
 
+const ADMIN_PAGE_SIZE = 10;
+
+function PaginationBar({
+  page,
+  totalItems,
+  pageSize = ADMIN_PAGE_SIZE,
+  onPageChange,
+}: {
+  page: number;
+  totalItems: number;
+  pageSize?: number;
+  onPageChange: (nextPage: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  if (totalItems === 0) return null;
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, totalItems);
+
+  return (
+    <div className="mt-4 pt-3 border-t border-[#E8D5B5] flex flex-wrap items-center justify-between gap-2 text-xs text-[#734A29]">
+      <span className="font-medium">
+        Showing <strong className="text-[#3B1B0D]">{start}–{end}</strong> of{' '}
+        <strong className="text-[#3B1B0D]">{totalItems}</strong>
+      </span>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page <= 1}
+          className="px-2.5 py-1.5 rounded-lg bg-[#FFFDF9] border border-[#DFC39B] hover:bg-[#F4E6D2] text-[#3B1B0D] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" /> Prev
+        </button>
+        <span className="px-2.5 py-1 font-bold text-[#3B1B0D]">
+          Page {page} / {totalPages}
+        </span>
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          disabled={page >= totalPages}
+          className="px-2.5 py-1.5 rounded-lg bg-[#FFFDF9] border border-[#DFC39B] hover:bg-[#F4E6D2] text-[#3B1B0D] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-default"
+        >
+          Next <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanelPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [adminEmail, setAdminEmail] = useState('');
 
-  // Login state
+  // Login / Setup state
+  const [needsSetup, setNeedsSetup] = useState(false);
+  const [nameInput, setNameInput] = useState('Tapri Admin');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -134,6 +197,12 @@ export default function AdminPanelPage() {
   const [recentActivities, setRecentActivities] = useState<AdminActivity[]>([]);
   const [recentNotifications, setRecentNotifications] = useState<AdminNotification[]>([]);
 
+  // Pagination state per tab
+  const [groupsPage, setGroupsPage] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
+  const [activitiesPage, setActivitiesPage] = useState(1);
+  const [notificationsPage, setNotificationsPage] = useState(1);
+
   // Delete confirmation state
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -143,6 +212,7 @@ export default function AdminPanelPage() {
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newChaiTime, setNewChaiTime] = useState('10:30 AM');
+  const [newChaiTime24, setNewChaiTime24] = useState('10:30');
   const [newWorkingDays, setNewWorkingDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [newBanner, setNewBanner] = useState(BANNER_OPTIONS[0].url);
   const [newIsDefault, setNewIsDefault] = useState(true);
@@ -155,6 +225,13 @@ export default function AdminPanelPage() {
       const res = await fetch('/api/admin/dashboard');
       if (res.status === 401) {
         setAuthenticated(false);
+        try {
+          const authRes = await fetch('/api/admin/auth');
+          const authJson = await authRes.json();
+          setNeedsSetup(Boolean(authJson.needsSetup));
+        } catch {
+          setNeedsSetup(false);
+        }
         return;
       }
       const json = await res.json();
@@ -187,13 +264,18 @@ export default function AdminPanelPage() {
       const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailInput, password: passwordInput }),
+        body: JSON.stringify(
+          needsSetup
+            ? { action: 'setup', name: nameInput, email: emailInput, password: passwordInput }
+            : { email: emailInput, password: passwordInput }
+        ),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
         setLoginError(json.error || 'Invalid credentials');
         return;
       }
+      setNeedsSetup(false);
       setAuthenticated(true);
       setAdminEmail(json.admin?.email || emailInput);
       await fetchAdminDashboard();
@@ -304,9 +386,13 @@ export default function AdminPanelPage() {
             <span className="px-3 py-0.5 rounded-full bg-[#FDB933]/30 border border-[#DFC08E] text-[11px] font-bold text-[#6E3B0C] mb-1.5">
               BhabhiKiChai Control Center
             </span>
-            <h1 className="font-kalam text-3xl font-bold text-[#3B1B0D]">Admin Tapri Login</h1>
+            <h1 className="font-kalam text-3xl font-bold text-[#3B1B0D]">
+              {needsSetup ? 'Create Admin Account' : 'Admin Tapri Login'}
+            </h1>
             <p className="text-xs text-[#734A29] mt-1">
-              Default groups, customers, notifications &amp; activities manage karein
+              {needsSetup
+                ? 'Database me pehla admin account banayein (admins collection)'
+                : 'Default groups, customers, notifications & activities manage karein'}
             </p>
           </div>
 
@@ -314,6 +400,20 @@ export default function AdminPanelPage() {
             {loginError && (
               <div className="p-2.5 rounded-xl bg-[#FCE4E4] border border-[#F5C2C2] text-xs font-bold text-[#9E2A2B] text-center">
                 {loginError}
+              </div>
+            )}
+
+            {needsSetup && (
+              <div>
+                <label className="block text-xs font-bold text-[#4A2412] mb-1">Admin Name</label>
+                <input
+                  type="text"
+                  required
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Tapri Admin"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-[#DFC08E] text-sm text-[#1C1006] focus:outline-none focus:ring-2 focus:ring-[#F4B52E]"
+                />
               </div>
             )}
 
@@ -356,7 +456,15 @@ export default function AdminPanelPage() {
               className="w-full py-2.5 rounded-xl bg-[#3B1B0D] hover:bg-[#522915] text-[#FFF4DF] font-bold text-sm shadow-md transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
             >
               <ShieldCheck className="w-4 h-4 text-[#F4B52E]" />
-              <span>{loginLoading ? 'Logging in...' : 'Login to Admin Panel'}</span>
+              <span>
+                {loginLoading
+                  ? needsSetup
+                    ? 'Creating Admin...'
+                    : 'Logging in...'
+                  : needsSetup
+                  ? 'Create Admin & Login'
+                  : 'Login to Admin Panel'}
+              </span>
             </button>
           </form>
 
@@ -598,362 +706,493 @@ export default function AdminPanelPage() {
           })}
         </div>
 
-        {/* TAB 1: ALL GROUPS (Default + Customer Groups) */}
-        {activeTab === 'groups' && (
-          <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D]">
-                  All Chai Groups ({groups.length})
-                </h2>
-                <p className="text-xs text-[#734A29]">
-                  Default groups aur customers ke banaye hue saare groups yahan manage karein
-                </p>
+        {/* TAB 1: ALL GROUPS (Table + Pagination) */}
+        {activeTab === 'groups' && (() => {
+          const pagedGroups = groups.slice(
+            (groupsPage - 1) * ADMIN_PAGE_SIZE,
+            groupsPage * ADMIN_PAGE_SIZE
+          );
+          return (
+            <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D]">
+                    All Chai Groups ({groups.length})
+                  </h2>
+                  <p className="text-xs text-[#734A29]">
+                    Default groups aur customers ke banaye hue saare groups yahan manage karein
+                  </p>
+                </div>
               </div>
+
+              {groups.length === 0 ? (
+                <p className="text-center text-sm text-[#734A29] py-10">Koi group nahi mila.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto rounded-2xl border border-[#E8D5B5] bg-[#FFFDF9]">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#F5E6D0] text-[#4A2412] border-b border-[#E8D5B5]">
+                          <th className="py-3 px-3.5 font-extrabold">Group</th>
+                          <th className="py-3 px-3 font-extrabold">Type</th>
+                          <th className="py-3 px-3 font-extrabold">Invite Code</th>
+                          <th className="py-3 px-3 font-extrabold">Schedule</th>
+                          <th className="py-3 px-3 font-extrabold text-center">Members</th>
+                          <th className="py-3 px-3 font-extrabold">Created By</th>
+                          <th className="py-3 px-3.5 font-extrabold text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFE1CA]">
+                        {pagedGroups.map((grp) => (
+                          <tr key={grp._id} className="hover:bg-[#FAF2E4]/70 transition-colors">
+                            <td className="py-3 px-3.5">
+                              <div className="flex items-center gap-2.5 min-w-[160px]">
+                                <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-[#2C1409] shrink-0">
+                                  {grp.bannerImage ? (
+                                    <Image
+                                      src={grp.bannerImage}
+                                      alt={grp.name}
+                                      fill
+                                      className="object-cover"
+                                      unoptimized
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-sm">☕</div>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-[#1C1006] truncate">{grp.name}</p>
+                                  {grp.description && (
+                                    <p className="text-[11px] text-[#734A29] truncate max-w-[200px]">
+                                      {grp.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                                  grp.isDefault
+                                    ? 'bg-[#F4B52E] text-[#281308]'
+                                    : 'bg-[#E0ECFF] text-[#1E40AF]'
+                                }`}
+                              >
+                                {grp.isDefault ? 'Default' : 'Customer'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 font-mono font-bold text-[#4A2412] whitespace-nowrap">
+                              {grp.inviteCode}
+                            </td>
+                            <td className="py-3 px-3 text-[#54433A] whitespace-nowrap">
+                              {grp.chaiTime} • {grp.workingDays.length}d/wk
+                            </td>
+                            <td className="py-3 px-3 text-center font-bold text-[#1C1006]">
+                              {grp.memberCount}
+                            </td>
+                            <td className="py-3 px-3 text-[#54433A] whitespace-nowrap">
+                              {grp.createdBy?.name || 'Admin'}
+                            </td>
+                            <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                              {confirmDeleteId === grp._id ? (
+                                <div className="inline-flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="px-2 py-1 rounded-lg bg-[#EFE1CA] text-[#3B1B0D] text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={deletingId === grp._id}
+                                    onClick={() => handleDeleteGroup(grp._id)}
+                                    className="px-2 py-1 rounded-lg bg-[#DC2626] text-white text-[10px] font-bold cursor-pointer"
+                                  >
+                                    {deletingId === grp._id ? '...' : 'Confirm'}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(grp._id)}
+                                  className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <PaginationBar
+                    page={groupsPage}
+                    totalItems={groups.length}
+                    onPageChange={setGroupsPage}
+                  />
+                </>
+              )}
             </div>
+          );
+        })()}
 
-            {groups.length === 0 ? (
-              <p className="text-center text-sm text-[#734A29] py-10">Koi group nahi mila.</p>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {groups.map((grp) => (
-                  <div
-                    key={grp._id}
-                    className="relative bg-[#2C1409] border border-[#5A2C16] rounded-2xl overflow-hidden text-[#FFF4DF] flex flex-col justify-between shadow-md"
-                  >
-                    <div className="relative h-28 w-full bg-[#1A0B04]">
-                      {grp.bannerImage ? (
-                        <Image
-                          src={grp.bannerImage}
-                          alt={grp.name}
-                          fill
-                          className="object-cover object-center"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl">☕</div>
-                      )}
-                      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-[#2C1409] to-transparent" />
-                      <span
-                        className={`absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide shadow-sm ${
-                          grp.isDefault
-                            ? 'bg-[#F4B52E] text-[#281308]'
-                            : 'bg-[#3B82F6] text-white'
-                        }`}
-                      >
-                        {grp.isDefault ? 'Default Group' : 'Customer Group'}
-                      </span>
-                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-xs text-[10px] font-mono text-[#FFF4DF]">
-                        {grp.inviteCode}
-                      </span>
-                    </div>
-
-                    <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-                      <div>
-                        <h3 className="font-bold text-base text-[#FFF4DF] truncate">{grp.name}</h3>
-                        {grp.description && (
-                          <p className="text-xs text-[#CDB29B] mt-0.5 line-clamp-2">{grp.description}</p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] text-[#E6CCB2]">
-                          <span>👥 {grp.memberCount} Members</span>
-                          <span>⏰ {grp.chaiTime}</span>
-                          <span>📅 {grp.workingDays.length} Days/Wk</span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2.5 border-t border-[#4A2412] flex items-center justify-between gap-2 text-[11px]">
-                        <span className="text-[#CDB29B] truncate">
-                          By: <strong className="text-[#FFF4DF]">{grp.createdBy?.name || 'Admin'}</strong>
-                        </span>
-
-                        {confirmDeleteId === grp._id ? (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="px-2 py-1 rounded-lg bg-[#4A2412] text-[#FFF4DF] text-[10px] font-bold cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              disabled={deletingId === grp._id}
-                              onClick={() => handleDeleteGroup(grp._id)}
-                              className="px-2 py-1 rounded-lg bg-[#DC2626] text-white text-[10px] font-bold cursor-pointer"
-                            >
-                              {deletingId === grp._id ? '...' : 'Confirm'}
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(grp._id)}
-                            className="px-2.5 py-1 rounded-lg bg-[#DC2626]/15 hover:bg-[#DC2626]/30 text-[#FCA5A5] text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Delete</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
+        {/* TAB 2: CUSTOMERS (Table + Pagination) */}
+        {activeTab === 'users' && (() => {
+          const pagedUsers = users.slice(
+            (usersPage - 1) * ADMIN_PAGE_SIZE,
+            usersPage * ADMIN_PAGE_SIZE
+          );
+          return (
+            <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
+              <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D] mb-4">
+                Registered Customers ({users.length})
+              </h2>
+              {users.length === 0 ? (
+                <p className="text-center text-sm text-[#734A29] py-10">Koi customer nahi mila.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto rounded-2xl border border-[#E8D5B5] bg-[#FFFDF9]">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#F5E6D0] text-[#4A2412] border-b border-[#E8D5B5]">
+                          <th className="py-3 px-3.5 font-extrabold">Customer</th>
+                          <th className="py-3 px-3 font-extrabold">Email</th>
+                          <th className="py-3 px-3 font-extrabold text-center">Groups</th>
+                          <th className="py-3 px-3.5 font-extrabold text-right">Joined</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFE1CA]">
+                        {pagedUsers.map((u) => (
+                          <tr key={u._id} className="hover:bg-[#FAF2E4]/70 transition-colors">
+                            <td className="py-3 px-3.5">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-[#3B1B0D] text-[#F4B52E] font-bold text-xs flex items-center justify-center shrink-0">
+                                  {u.name?.charAt(0)?.toUpperCase() || 'U'}
+                                </div>
+                                <span className="font-bold text-[#1C1006]">{u.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-[#54433A]">{u.email}</td>
+                            <td className="py-3 px-3 text-center">
+                              <span className="px-2.5 py-0.5 rounded-full bg-[#FDE4B8] text-[#6E3B0C] text-[11px] font-bold">
+                                {u.groupsCount} {u.groupsCount === 1 ? 'Group' : 'Groups'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3.5 text-right text-[#734A29] whitespace-nowrap">
+                              {formatDateTime(u.createdAt)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  <PaginationBar
+                    page={usersPage}
+                    totalItems={users.length}
+                    onPageChange={setUsersPage}
+                  />
+                </>
+              )}
+            </div>
+          );
+        })()}
 
-        {/* TAB 2: CUSTOMERS */}
-        {activeTab === 'users' && (
-          <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
-            <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D] mb-4">
-              Registered Customers ({users.length})
-            </h2>
-            {users.length === 0 ? (
-              <p className="text-center text-sm text-[#734A29] py-10">Koi customer nahi mila.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {users.map((u) => (
-                  <div
-                    key={u._id}
-                    className="p-3.5 rounded-2xl bg-[#FFFDF9] border border-[#E8D5B5] flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-[#3B1B0D] text-[#F4B52E] font-bold text-sm flex items-center justify-center shrink-0">
-                        {u.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-sm text-[#1C1006] truncate">{u.name}</p>
-                        <p className="text-xs text-[#734A29] truncate">{u.email}</p>
-                        <p className="text-[10px] text-[#9E8C76] mt-0.5">
-                          Joined {formatDateTime(u.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-full bg-[#FDE4B8] text-[#6E3B0C] text-[11px] font-bold shrink-0">
-                      {u.groupsCount} {u.groupsCount === 1 ? 'Group' : 'Groups'}
-                    </span>
+        {/* TAB 3: RECENT ACTIVITIES (Table + Pagination) */}
+        {activeTab === 'activities' && (() => {
+          const pagedActivities = recentActivities.slice(
+            (activitiesPage - 1) * ADMIN_PAGE_SIZE,
+            activitiesPage * ADMIN_PAGE_SIZE
+          );
+          return (
+            <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
+              <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D] mb-4">
+                Recent Activities ({recentActivities.length})
+              </h2>
+              {recentActivities.length === 0 ? (
+                <p className="text-center text-sm text-[#734A29] py-10">Abhi koi activity nahi hai.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto rounded-2xl border border-[#E8D5B5] bg-[#FFFDF9]">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#F5E6D0] text-[#4A2412] border-b border-[#E8D5B5]">
+                          <th className="py-3 px-3.5 font-extrabold">Action</th>
+                          <th className="py-3 px-3 font-extrabold">Group</th>
+                          <th className="py-3 px-3 font-extrabold">Details</th>
+                          <th className="py-3 px-3 font-extrabold">Actor</th>
+                          <th className="py-3 px-3.5 font-extrabold text-right">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFE1CA]">
+                        {pagedActivities.map((act) => (
+                          <tr key={act._id} className="hover:bg-[#FAF2E4]/70 transition-colors">
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded-full bg-[#3B1B0D] text-[#F4B52E] text-[10px] font-bold uppercase">
+                                {act.action.replace(/_/g, ' ')}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 font-bold text-[#8C4610] whitespace-nowrap">
+                              {act.groupId?.name || '—'}
+                            </td>
+                            <td className="py-3 px-3 text-[#2B211B] max-w-xs break-words">
+                              {act.reason || 'Action recorded'}
+                            </td>
+                            <td className="py-3 px-3 text-[#54433A] whitespace-nowrap">
+                              {act.actorUserId?.name || 'System'}
+                            </td>
+                            <td className="py-3 px-3.5 text-right text-[#734A29] whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatDateTime(act.createdAt)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  <PaginationBar
+                    page={activitiesPage}
+                    totalItems={recentActivities.length}
+                    onPageChange={setActivitiesPage}
+                  />
+                </>
+              )}
+            </div>
+          );
+        })()}
 
-        {/* TAB 3: RECENT ACTIVITIES */}
-        {activeTab === 'activities' && (
-          <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
-            <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D] mb-4">
-              Recent Activities ({recentActivities.length})
-            </h2>
-            {recentActivities.length === 0 ? (
-              <p className="text-center text-sm text-[#734A29] py-10">Abhi koi activity nahi hai.</p>
-            ) : (
-              <div className="space-y-2.5">
-                {recentActivities.map((act) => (
-                  <div
-                    key={act._id}
-                    className="p-3.5 rounded-2xl bg-[#FFFDF9] border border-[#E8D5B5] flex flex-wrap items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-full bg-[#3B1B0D] text-[#F4B52E] text-[10px] font-bold uppercase">
-                          {act.action.replace(/_/g, ' ')}
-                        </span>
-                        {act.groupId?.name && (
-                          <span className="text-xs font-bold text-[#8C4610]">{act.groupId.name}</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-[#2B211B] mt-1">{act.reason || 'Action recorded'}</p>
-                      <p className="text-[11px] text-[#734A29] mt-0.5">
-                        By: {act.actorUserId?.name || 'System'} ({act.actorUserId?.email || '—'})
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-[#8A735E] flex items-center gap-1 shrink-0">
-                      <Clock className="w-3 h-3" />
-                      {formatDateTime(act.createdAt)}
-                    </span>
+        {/* TAB 4: RECENT NOTIFICATIONS (Table + Pagination) */}
+        {activeTab === 'notifications' && (() => {
+          const pagedNotifications = recentNotifications.slice(
+            (notificationsPage - 1) * ADMIN_PAGE_SIZE,
+            notificationsPage * ADMIN_PAGE_SIZE
+          );
+          return (
+            <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
+              <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D] mb-4">
+                Recent Notifications ({recentNotifications.length})
+              </h2>
+              {recentNotifications.length === 0 ? (
+                <p className="text-center text-sm text-[#734A29] py-10">Koi notification nahi hai.</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto rounded-2xl border border-[#E8D5B5] bg-[#FFFDF9]">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#F5E6D0] text-[#4A2412] border-b border-[#E8D5B5]">
+                          <th className="py-3 px-3.5 font-extrabold">Title</th>
+                          <th className="py-3 px-3 font-extrabold">Message</th>
+                          <th className="py-3 px-3 font-extrabold">Recipient</th>
+                          <th className="py-3 px-3 font-extrabold">Group</th>
+                          <th className="py-3 px-3 font-extrabold text-center">Status</th>
+                          <th className="py-3 px-3.5 font-extrabold text-right">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EFE1CA]">
+                        {pagedNotifications.map((notif) => (
+                          <tr key={notif._id} className="hover:bg-[#FAF2E4]/70 transition-colors">
+                            <td className="py-3 px-3.5 font-bold text-[#1C1006] whitespace-nowrap">
+                              {notif.title}
+                            </td>
+                            <td className="py-3 px-3 text-[#4A2412] max-w-xs break-words">
+                              {notif.message}
+                            </td>
+                            <td className="py-3 px-3 text-[#54433A] whitespace-nowrap">
+                              {notif.userId?.name || 'User'}
+                            </td>
+                            <td className="py-3 px-3 text-[#8C4610] font-semibold whitespace-nowrap">
+                              {notif.groupId?.name || '—'}
+                            </td>
+                            <td className="py-3 px-3 text-center whitespace-nowrap">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  notif.read
+                                    ? 'bg-[#E5E7EB] text-[#4B5563]'
+                                    : 'bg-[#D1F2DF] text-[#135E35]'
+                                }`}
+                              >
+                                {notif.read ? 'Read' : 'Unread'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3.5 text-right text-[#734A29] whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatDateTime(notif.createdAt)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 4: RECENT NOTIFICATIONS */}
-        {activeTab === 'notifications' && (
-          <div className="bg-[#FAF6EE] border border-[#EADBCA] rounded-3xl p-4 sm:p-6 shadow-sm">
-            <h2 className="font-kalam text-2xl font-bold text-[#3B1B0D] mb-4">
-              Recent Notifications ({recentNotifications.length})
-            </h2>
-            {recentNotifications.length === 0 ? (
-              <p className="text-center text-sm text-[#734A29] py-10">Koi notification nahi hai.</p>
-            ) : (
-              <div className="space-y-2.5">
-                {recentNotifications.map((notif) => (
-                  <div
-                    key={notif._id}
-                    className="p-3.5 rounded-2xl bg-[#FFFDF9] border border-[#E8D5B5] flex flex-wrap items-start justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-sm text-[#1C1006]">{notif.title}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            notif.read
-                              ? 'bg-[#E5E7EB] text-[#4B5563]'
-                              : 'bg-[#D1F2DF] text-[#135E35]'
-                          }`}
-                        >
-                          {notif.read ? 'Read' : 'Unread'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#4A2412] mt-1">{notif.message}</p>
-                      <p className="text-[11px] text-[#734A29] mt-0.5">
-                        To: {notif.userId?.name || 'User'} ({notif.userId?.email || '—'})
-                        {notif.groupId?.name ? ` • Group: ${notif.groupId.name}` : ''}
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-[#8A735E] flex items-center gap-1 shrink-0">
-                      <Clock className="w-3 h-3" />
-                      {formatDateTime(notif.createdAt)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  <PaginationBar
+                    page={notificationsPage}
+                    totalItems={recentNotifications.length}
+                    onPageChange={setNotificationsPage}
+                  />
+                </>
+              )}
+            </div>
+          );
+        })()}
       </main>
       </div>
 
       {/* CREATE DEFAULT GROUP MODAL */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-[#FFF9ED] border-4 border-[#8B502C] rounded-3xl p-6 shadow-2xl text-[#2B211B] max-h-[90vh] overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => setIsCreateModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#F2E5D3] text-[#4A2412] cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="font-kalam text-2xl font-bold text-[#3B1B0D] mb-1">
-              Create Default Chai Group
-            </h3>
-            <p className="text-xs text-[#734A29] mb-4">
-              Admin dwara banaya gaya default group sabhi naye users ko dikhega aur user ise delete nahi kar payenge.
-            </p>
-
-            <form onSubmit={handleCreateDefaultGroup} className="space-y-4">
-              {createError && (
-                <div className="p-2.5 rounded-xl bg-[#FCE4E4] border border-[#F5C2C2] text-xs font-bold text-[#9E2A2B]">
-                  {createError}
-                </div>
-              )}
-
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+          onClick={() => setIsCreateModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg bg-[#FFF9ED] border-4 border-[#8B502C] rounded-3xl shadow-2xl text-[#2B211B] max-h-[90vh] flex flex-col overflow-hidden"
+          >
+            {/* Fixed Header */}
+            <div className="px-5 py-4 border-b border-[#EEDFCA] flex items-start justify-between gap-3 shrink-0">
               <div>
-                <label className="block text-xs font-bold text-[#4A2412] mb-1">Group Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Morning Tapri Club"
-                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#DFC08E] text-sm focus:outline-none focus:ring-2 focus:ring-[#F4B52E]"
-                />
+                <h3 className="font-kalam text-2xl font-bold text-[#3B1B0D] leading-tight">
+                  Create Default Chai Group
+                </h3>
+                <p className="text-xs text-[#734A29] mt-0.5">
+                  Admin dwara banaya gaya default group demo/template ke roop me save hoga.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#F2E5D3] text-[#4A2412] cursor-pointer shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#4A2412] mb-1">Description</label>
-                <input
-                  type="text"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Daily adrak chai & discussions"
-                  className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#DFC08E] text-sm focus:outline-none focus:ring-2 focus:ring-[#F4B52E]"
-                />
-              </div>
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleCreateDefaultGroup} className="flex-1 flex flex-col min-h-0">
+              <div className="p-5 overflow-y-auto flex-1 space-y-3.5">
+                {createError && (
+                  <div className="p-2.5 rounded-xl bg-[#FCE4E4] border border-[#F5C2C2] text-xs font-bold text-[#9E2A2B]">
+                    {createError}
+                  </div>
+                )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#4A2412] mb-1">Chai Time</label>
+                  <label className="block text-xs font-bold text-[#4A2412] mb-1">Group Name *</label>
                   <input
                     type="text"
-                    value={newChaiTime}
-                    onChange={(e) => setNewChaiTime(e.target.value)}
-                    placeholder="10:30 AM"
+                    required
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="e.g. Morning Tapri Club"
                     className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#DFC08E] text-sm focus:outline-none focus:ring-2 focus:ring-[#F4B52E]"
                   />
                 </div>
 
-                <div className="flex items-end pb-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#3B1B0D]">
-                    <input
-                      type="checkbox"
-                      checked={newIsDefault}
-                      onChange={(e) => setNewIsDefault(e.target.checked)}
-                      className="w-4 h-4 accent-[#8C4610]"
-                    />
-                    <span>Mark as Default Group</span>
-                  </label>
+                <div>
+                  <label className="block text-xs font-bold text-[#4A2412] mb-1">Description</label>
+                  <input
+                    type="text"
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    placeholder="Daily adrak chai & discussions"
+                    className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#DFC08E] text-sm focus:outline-none focus:ring-2 focus:ring-[#F4B52E]"
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#4A2412] mb-1.5">Working Days</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {WEEKDAY_LABELS.map((d) => {
-                    const active = newWorkingDays.includes(d.num);
-                    return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-[#4A2412]">Chai Time</label>
+                      <span className="text-[11px] font-bold text-[#8C4610]">{newChaiTime}</span>
+                    </div>
+                    <input
+                      type="time"
+                      value={newChaiTime24}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val) {
+                          setNewChaiTime24(val);
+                          setNewChaiTime(to12Hour(val));
+                        }
+                      }}
+                      className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#DFC08E] text-sm font-bold text-[#3B1B0D] focus:outline-none focus:ring-2 focus:ring-[#F4B52E] cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="flex items-end pb-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#3B1B0D]">
+                      <input
+                        type="checkbox"
+                        checked={newIsDefault}
+                        onChange={(e) => setNewIsDefault(e.target.checked)}
+                        className="w-4 h-4 accent-[#8C4610]"
+                      />
+                      <span>Mark as Default Group</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#4A2412] mb-1.5">Working Days</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAY_LABELS.map((d) => {
+                      const active = newWorkingDays.includes(d.num);
+                      return (
+                        <button
+                          key={d.num}
+                          type="button"
+                          onClick={() => toggleWorkingDay(d.num)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer transition-colors ${
+                            active
+                              ? 'bg-[#3B1B0D] text-[#F4B52E] border-[#3B1B0D]'
+                              : 'bg-white text-[#6D533E] border-[#DFC08E]'
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#4A2412] mb-1.5">Banner Theme</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BANNER_OPTIONS.map((b) => (
                       <button
-                        key={d.num}
+                        key={b.id}
                         type="button"
-                        onClick={() => toggleWorkingDay(d.num)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer transition-colors ${
-                          active
-                            ? 'bg-[#3B1B0D] text-[#F4B52E] border-[#3B1B0D]'
-                            : 'bg-white text-[#6D533E] border-[#DFC08E]'
+                        onClick={() => setNewBanner(b.url)}
+                        className={`relative h-16 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
+                          newBanner === b.url
+                            ? 'border-[#8C4610] ring-2 ring-[#F4B52E]'
+                            : 'border-[#E8D5B5] opacity-80 hover:opacity-100'
                         }`}
                       >
-                        {d.label}
+                        <Image src={b.url} alt={b.label} fill className="object-cover" unoptimized />
+                        <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] font-bold py-0.5 px-1.5 truncate">
+                          {b.label}
+                        </span>
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#4A2412] mb-1.5">Banner Theme</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {BANNER_OPTIONS.map((b) => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => setNewBanner(b.url)}
-                      className={`relative h-16 rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                        newBanner === b.url
-                          ? 'border-[#8C4610] ring-2 ring-[#F4B52E]'
-                          : 'border-[#E8D5B5] opacity-80 hover:opacity-100'
-                      }`}
-                    >
-                      <Image src={b.url} alt={b.label} fill className="object-cover" unoptimized />
-                      <span className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[10px] font-bold py-0.5 px-1.5 truncate">
-                        {b.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+              {/* Fixed Footer Submit */}
+              <div className="px-5 py-3.5 border-t border-[#EEDFCA] bg-[#FFF9ED] shrink-0">
+                <button
+                  type="submit"
+                  disabled={creatingGroup}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#F4B52E] to-[#DE9008] text-[#281308] font-extrabold text-sm shadow-md cursor-pointer disabled:opacity-60"
+                >
+                  {creatingGroup ? 'Creating...' : 'Create Default Group'}
+                </button>
               </div>
-
-              <button
-                type="submit"
-                disabled={creatingGroup}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#F4B52E] to-[#DE9008] text-[#281308] font-extrabold text-sm shadow-md cursor-pointer disabled:opacity-60"
-              >
-                {creatingGroup ? 'Creating...' : 'Create Default Group'}
-              </button>
             </form>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { getAdminSession } from '@/lib/adminAuth';
 import { User } from '@/models/User';
@@ -12,6 +12,7 @@ import { Notification } from '@/models/Notification';
 const DEFAULT_INVITE_CODES = ['CHAI-OFFICE-99', 'CHAI-DOST-77', 'CHAI-WKND-22'];
 
 export async function GET() {
+  await connection();
   try {
     const session = await getAdminSession();
     if (!session) {
@@ -38,13 +39,13 @@ export async function GET() {
         .populate('actorUserId', 'name email')
         .populate('groupId', 'name')
         .sort({ createdAt: -1 })
-        .limit(40)
+        .limit(100)
         .lean(),
       Notification.find()
         .populate('userId', 'name email')
         .populate('groupId', 'name')
         .sort({ createdAt: -1 })
-        .limit(40)
+        .limit(100)
         .lean(),
     ]);
 

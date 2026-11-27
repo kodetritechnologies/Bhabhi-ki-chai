@@ -4,6 +4,8 @@ export interface IUser extends Document {
   name: string;
   email: string;
   passwordHash?: string;
+  otpCode?: string;
+  otpExpiresAt?: Date;
   avatar: string;
   timezone: string;
   notificationPreferences: {
@@ -20,6 +22,8 @@ const UserSchema = new Schema<IUser>(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true, index: true },
     passwordHash: { type: String },
+    otpCode: { type: String },
+    otpExpiresAt: { type: Date },
     avatar: { type: String, default: '' },
     timezone: { type: String, default: 'Asia/Kolkata' },
     notificationPreferences: {

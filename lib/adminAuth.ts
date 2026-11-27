@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 
 export const ADMIN_COOKIE_NAME = 'bhabhi_admin_token';
@@ -7,17 +8,20 @@ function getSecret(): string {
   return process.env.JWT_SECRET || 'kodetrisecrect';
 }
 
-export function getAdminCredentials() {
-  return {
-    email: (process.env.ADMIN_EMAIL || 'admin@bhabhikichai.com').trim().toLowerCase(),
-    password: process.env.ADMIN_PASSWORD || 'admin123',
-  };
+export async function hashAdminPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10);
 }
 
-export function signAdminToken(email: string): string {
+export async function verifyAdminPassword(password: string, passwordHash: string): Promise<boolean> {
+  if (!password || !passwordHash) return false;
+  return bcrypt.compare(password, passwordHash);
+}
+
+export function signAdminToken(email: string, adminId?: string): string {
   const payload = Buffer.from(
     JSON.stringify({
       email,
+      adminId,
       role: 'admin',
       exp: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
     })
@@ -26,7 +30,7 @@ export function signAdminToken(email: string): string {
   return `${payload}.${sig}`;
 }
 
-export function verifyAdminToken(token?: string | null): { email: string } | null {
+export function verifyAdminToken(token?: string | null): { email: string; adminId?: string } | null {
   if (!token) return null;
   const parts = token.split('.');
   if (parts.length !== 2) return null;
@@ -44,13 +48,13 @@ export function verifyAdminToken(token?: string | null): { email: string } | nul
     if (parsed.role !== 'admin' || !parsed.exp || Date.now() > parsed.exp) {
       return null;
     }
-    return { email: parsed.email };
+    return { email: parsed.email, adminId: parsed.adminId };
   } catch {
     return null;
   }
 }
 
-export async function getAdminSession(): Promise<{ email: string } | null> {
+export async function getAdminSession(): Promise<{ email: string; adminId?: string } | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   return verifyAdminToken(token);

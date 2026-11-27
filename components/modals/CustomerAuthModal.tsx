@@ -146,9 +146,8 @@ export default function CustomerAuthModal({
     }
   };
 
-  // 2. Step 1: Send OTP for Login
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 2. Step 1: Send OTP for Login (also handles Resend OTP)
+  const requestOtp = async (isResend = false) => {
     setErrorMessage('');
     setSuccessMessage('');
 
@@ -162,7 +161,7 @@ export default function CustomerAuthModal({
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail.trim() }),
+        body: JSON.stringify({ email: loginEmail.trim(), isResend }),
       });
 
       const data = await res.json();
@@ -183,6 +182,15 @@ export default function CustomerAuthModal({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await requestOtp(false);
+  };
+
+  const handleResendOtp = async () => {
+    await requestOtp(true);
   };
 
   // 3. Step 2: Verify 4-digit OTP & Login
@@ -480,8 +488,9 @@ export default function CustomerAuthModal({
                 <div className="text-center mt-2">
                   <button
                     type="button"
-                    onClick={handleSendOtp}
-                    className="text-xs font-semibold text-[#7A695E] hover:text-[#3B1B0D] cursor-pointer"
+                    disabled={loading}
+                    onClick={handleResendOtp}
+                    className="text-xs font-semibold text-[#7A695E] hover:text-[#3B1B0D] cursor-pointer disabled:opacity-50"
                   >
                     OTP nahi mila? <span className="underline font-bold text-[#8C4610]">Resend OTP</span>
                   </button>

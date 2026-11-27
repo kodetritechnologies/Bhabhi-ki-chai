@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db';
 import { User } from '@/models/User';
+import {
+  generateFourDigitOtp,
+  sendNewUserAdminNotification,
+  sendOtpEmail,
+} from '@/lib/mailer';
 
 export async function POST(request: Request) {
   try {
@@ -31,10 +36,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const otpCode = generateFourDigitOtp();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     // Create new customer/user
     const newUser = await User.create({
       name: cleanName,
       email: cleanEmail,
+      otpCode,
+      otpExpiresAt,
       avatar: '/images/default-avatar.png',
       notificationPreferences: {
         inApp: true,
@@ -43,9 +53,33 @@ export async function POST(request: Request) {
       },
     });
 
+    // Send admin notification email & initial login OTP email in parallel
+    const mailResults = await Promise.allSettled([
+      sendNewUserAdminNotification({
+        name: cleanName,
+        email: cleanEmail,
+        createdAt: newUser.createdAt,
+      }),
+      sendOtpEmail({
+        to: cleanEmail,
+        name: cleanName,
+        otp: otpCode,
+        isResend: false,
+      }),
+    ]);
+
+    mailResults.forEach((res, idx) => {
+      if (res.status === 'rejected') {
+        console.error(
+          idx === 0 ? 'Admin registration notification email failed:' : 'Initial OTP email failed:',
+          res.reason
+        );
+      }
+    });
+
     return NextResponse.json({
       success: true,
-      message: 'Account safaltapoorvak ban gaya! Ab OTP daal kar login karein.',
+      message: 'Account safaltapoorvak ban gaya! Aapke email par 4-digit OTP bhej diya gaya hai.',
       user: {
         _id: newUser._id,
         name: newUser.name,
