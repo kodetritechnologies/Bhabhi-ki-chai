@@ -278,6 +278,8 @@ export default function AdminPanelPage() {
       setNeedsSetup(false);
       setAuthenticated(true);
       setAdminEmail(json.admin?.email || emailInput);
+      setEmailInput('');
+      setPasswordInput('');
       await fetchAdminDashboard();
     } catch {
       setLoginError('Network error, please try again.');
@@ -323,6 +325,11 @@ export default function AdminPanelPage() {
       setIsCreateModalOpen(false);
       setNewName('');
       setNewDesc('');
+      setNewChaiTime('10:30 AM');
+      setNewChaiTime24('10:30');
+      setNewWorkingDays([1, 2, 3, 4, 5, 6]);
+      setNewBanner(BANNER_OPTIONS[0].url);
+      setNewIsDefault(true);
       await fetchAdminDashboard();
     } catch {
       setCreateError('Network error while creating group.');

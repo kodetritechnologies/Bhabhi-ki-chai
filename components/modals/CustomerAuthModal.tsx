@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   LuX as X,
   LuUser as UserIcon,
@@ -49,11 +49,26 @@ export default function CustomerAuthModal({
     useRef<HTMLInputElement>(null),
   ];
 
-  const handleClose = () => {
-    setErrorMessage('');
-    setSuccessMessage('');
+  const resetAllFields = () => {
+    setMode(initialMode);
+    setName('');
+    setRegEmail('');
+    setLoginEmail('');
     setLoginStep('email');
     setOtp(['', '', '', '']);
+    setErrorMessage('');
+    setSuccessMessage('');
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      resetAllFields();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialMode]);
+
+  const handleClose = () => {
+    resetAllFields();
     onClose();
   };
 
@@ -222,7 +237,7 @@ export default function CustomerAuthModal({
       setSuccessMessage('Login safal raha! Khul raha hai dashboard...');
       setTimeout(() => {
         onSuccess(data.user);
-        onClose();
+        handleClose();
       }, 700);
     } catch (err) {
       console.error(err);

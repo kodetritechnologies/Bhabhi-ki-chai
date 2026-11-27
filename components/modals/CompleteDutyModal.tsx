@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LuX as X,
   LuCheck as Check,
@@ -40,6 +40,15 @@ export default function CompleteDutyModal({
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('paid');
   const [note, setNote] = useState('4 Special Cutting Chai');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setAmount('100');
+      setPaidByUserId(duty?.assignedUserId?._id || '');
+      setPaymentStatus('paid');
+      setNote('4 Special Cutting Chai');
+    }
+  }, [isOpen, duty?._id, duty?.assignedUserId?._id]);
 
   if (!isOpen || !duty) return null;
 

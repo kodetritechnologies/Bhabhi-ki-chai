@@ -12,6 +12,8 @@ import {
   LuKeyRound as KeyIcon,
   LuCircleAlert as AlertCircle,
   LuCoffee as Coffee,
+  LuChevronUp as ChevronUp,
+  LuChevronDown as ChevronDown,
 } from 'react-icons/lu';
 
 interface CreateGroupModalProps {
@@ -92,7 +94,29 @@ export default function CreateGroupModal({
   const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5, 6]); // Mon to Sat
   const [memberInput, setMemberInput] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>([]);
+  const [rotationOrder, setRotationOrder] = useState<string[]>(() =>
+    userEmail ? [userEmail.trim().toLowerCase()] : ['__self__']
+  );
   const [selectedBanner, setSelectedBanner] = useState(BANNER_OPTIONS[0].url);
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setName('');
+      setDescription('');
+      setChaiTime('10:30 AM');
+      setChaiTime24('10:30');
+      setWorkingDays([1, 2, 3, 4, 5, 6]);
+      setMemberInput('');
+      setMemberEmails([]);
+      setRotationOrder([userEmail ? userEmail.trim().toLowerCase() : '__self__']);
+      setSelectedBanner(BANNER_OPTIONS[0].url);
+      setInviteCode('');
+      setCreatedGroup(null);
+      setErrorMessage('');
+      setCopied(false);
+    }
+  }, [isOpen, initialTab, userEmail]);
 
   // Join Form State
   const [inviteCode, setInviteCode] = useState('');
@@ -128,10 +152,13 @@ export default function CreateGroupModal({
     }
   };
 
+  const selfKey = userEmail ? userEmail.trim().toLowerCase() : '__self__';
+
   const handleAddMember = () => {
     const clean = memberInput.trim().toLowerCase();
-    if (clean && clean.includes('@') && !memberEmails.includes(clean)) {
+    if (clean && clean.includes('@') && clean !== selfKey && !memberEmails.includes(clean)) {
       setMemberEmails([...memberEmails, clean]);
+      setRotationOrder((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
       setMemberInput('');
     }
   };
@@ -145,6 +172,18 @@ export default function CreateGroupModal({
 
   const handleRemoveMember = (emailToRemove: string) => {
     setMemberEmails(memberEmails.filter((e) => e !== emailToRemove));
+    setRotationOrder((prev) => prev.filter((e) => e !== emailToRemove));
+  };
+
+  const moveRotationItem = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= rotationOrder.length) return;
+    setRotationOrder((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(index, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
   };
 
   // Submit Create Group
@@ -171,6 +210,7 @@ export default function CreateGroupModal({
           workingDays,
           userEmail,
           memberEmails,
+          rotationOrder,
           bannerImage: selectedBanner,
         }),
       });
@@ -250,6 +290,7 @@ export default function CreateGroupModal({
     setWorkingDays([1, 2, 3, 4, 5, 6]);
     setMemberInput('');
     setMemberEmails([]);
+    setRotationOrder([userEmail ? userEmail.trim().toLowerCase() : '__self__']);
     setInviteCode('');
     setCreatedGroup(null);
     setErrorMessage('');
@@ -528,23 +569,76 @@ export default function CreateGroupModal({
                     <span>Add</span>
                   </button>
                 </div>
-                {memberEmails.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {memberEmails.map((email) => (
-                      <span
-                        key={email}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#EBD8C3] text-[#3B1B0D] text-[11px] font-semibold rounded-lg"
-                      >
-                        {email}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMember(email)}
-                          className="text-red-700 hover:text-red-900 cursor-pointer font-bold ml-0.5"
-                        >
-                          ×
-                        </button>
+                {rotationOrder.length > 0 && (
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-[#FAF2E4] border border-[#E2CAA7]">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-bold text-[#3B1B0D]">
+                        🔄 Chai Duty Order (Pehle kiski baari)
                       </span>
-                    ))}
+                      <span className="text-[10px] text-[#734A29] font-medium">
+                        ↑ ↓ se order set karein
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {rotationOrder.map((itemEmail, idx) => {
+                        const isSelf = itemEmail === selfKey || itemEmail === '__self__';
+                        return (
+                          <div
+                            key={itemEmail}
+                            className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-[#E8DAC2] text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={`px-1.5 py-0.5 rounded-md text-[10px] font-extrabold shrink-0 ${
+                                  idx === 0
+                                    ? 'bg-[#F4B52E] text-[#281308]'
+                                    : 'bg-[#EFE2CE] text-[#6E492D]'
+                                }`}
+                              >
+                                #{idx + 1}
+                                {idx === 0 ? ' • Pehle' : ''}
+                              </span>
+                              <span className="font-semibold text-[#3B1B0D] truncate">
+                                {isSelf
+                                  ? `You (${userEmail || 'Creator'})`
+                                  : itemEmail}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => moveRotationItem(idx, -1)}
+                                title="Move Up"
+                                className="p-1 rounded-md bg-[#FAF2E4] hover:bg-[#EFE2CE] text-[#3B1B0D] disabled:opacity-35 cursor-pointer disabled:cursor-default"
+                              >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === rotationOrder.length - 1}
+                                onClick={() => moveRotationItem(idx, 1)}
+                                title="Move Down"
+                                className="p-1 rounded-md bg-[#FAF2E4] hover:bg-[#EFE2CE] text-[#3B1B0D] disabled:opacity-35 cursor-pointer disabled:cursor-default"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                              {!isSelf && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveMember(itemEmail)}
+                                  title="Remove member"
+                                  className="px-1.5 py-0.5 text-red-700 hover:text-red-900 cursor-pointer font-bold"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

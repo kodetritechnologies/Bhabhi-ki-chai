@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LuX as X, LuRefreshCw as RefreshCw } from 'react-icons/lu';
 
 interface SwapDutyModalProps {
@@ -30,6 +30,14 @@ export default function SwapDutyModal({
   const [dutyId2, setDutyId2] = useState(upcomingDuties[1]?._id ?? '');
   const [reason, setReason] = useState('Out of office');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDutyId1(todayDutyId || (upcomingDuties[0]?._id ?? ''));
+      setDutyId2(upcomingDuties[1]?._id ?? '');
+      setReason('Out of office');
+    }
+  }, [isOpen, todayDutyId, upcomingDuties]);
 
   if (!isOpen) return null;
 

@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import {
   LuCircleCheck as CheckCircle2,
   LuBell as Bell,
   LuUserPlus as UserPlus,
-  LuChevronLeft as ChevronLeft,
-  LuChevronRight as ChevronRight,
 } from 'react-icons/lu';
+import PushAlertsButton from '@/components/PushAlertsButton';
 
 interface ActivityItem {
   _id: string;
@@ -129,9 +128,11 @@ export function RecentActivityCard({
 export function NotificationsCard({
   notifications = [],
   onClearNotifications,
+  userEmail,
 }: {
   notifications?: NotificationItem[];
   onClearNotifications?: () => void;
+  userEmail?: string;
 }) {
   const recentNotifications = notifications.slice(0, 4);
   const unreadCount = recentNotifications.filter((n) => !n.read).length;
@@ -189,6 +190,8 @@ export function NotificationsCard({
           </div>
         )}
       </div>
+
+      <PushAlertsButton userEmail={userEmail} />
     </div>
   );
 }

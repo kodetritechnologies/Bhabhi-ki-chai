@@ -107,6 +107,7 @@ export async function POST(request: Request) {
       creatorEmail,
       userEmail,
       memberEmails = [],
+      rotationOrder = [],
       bannerImage,
     } = body;
 
@@ -151,47 +152,71 @@ export async function POST(request: Request) {
       rotationPolicy: 'move_to_end',
     });
 
-    // 1. Add Creator as Admin with position 0
-    await GroupMember.create({
-      groupId: newGroup._id,
-      userId: currentUser._id,
-      role: 'admin',
-      rotationPosition: 0,
-      color: MEMBER_COLORS[0],
-      status: 'active',
-    });
+    // Build ordered list of emails for rotationPosition (0, 1, 2, ...)
+    const orderedEmails: string[] = [];
+    const seen = new Set<string>();
+    const selfEmail = currentUser.email.trim().toLowerCase();
 
-    let currentPosition = 1;
+    if (Array.isArray(rotationOrder) && rotationOrder.length > 0) {
+      for (const raw of rotationOrder) {
+        const clean =
+          raw === '__self__' ? selfEmail : (raw || '').trim().toLowerCase();
+        if (clean && !seen.has(clean)) {
+          seen.add(clean);
+          orderedEmails.push(clean);
+        }
+      }
+    }
 
-    // 2. Add any additional invited member emails
-    if (Array.isArray(memberEmails) && memberEmails.length > 0) {
+    if (!seen.has(selfEmail)) {
+      seen.add(selfEmail);
+      orderedEmails.unshift(selfEmail);
+    }
+
+    if (Array.isArray(memberEmails)) {
       for (const rawEmail of memberEmails) {
         const cleanEmail = (rawEmail || '').trim().toLowerCase();
-        if (!cleanEmail || cleanEmail === currentUser.email) continue;
-
-        let memberUser = await User.findOne({ email: cleanEmail });
-        if (!memberUser) {
-          // Create user account if doesn't exist yet
-          const namePart = cleanEmail.split('@')[0];
-          const autoName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-          memberUser = await User.create({
-            name: autoName,
-            email: cleanEmail,
-            avatar: '/images/default-avatar.png',
-          });
+        if (cleanEmail && !seen.has(cleanEmail)) {
+          seen.add(cleanEmail);
+          orderedEmails.push(cleanEmail);
         }
+      }
+    }
 
-        // Add to group member
+    // Create GroupMember entries in exact rotationPosition order
+    for (let pos = 0; pos < orderedEmails.length; pos++) {
+      const emailItem = orderedEmails[pos];
+      if (emailItem === selfEmail) {
         await GroupMember.create({
           groupId: newGroup._id,
-          userId: memberUser._id,
-          role: 'member',
-          rotationPosition: currentPosition,
-          color: MEMBER_COLORS[currentPosition % MEMBER_COLORS.length],
+          userId: currentUser._id,
+          role: 'admin',
+          rotationPosition: pos,
+          color: MEMBER_COLORS[pos % MEMBER_COLORS.length],
           status: 'active',
         });
-        currentPosition++;
+        continue;
       }
+
+      let memberUser = await User.findOne({ email: emailItem });
+      if (!memberUser) {
+        const namePart = emailItem.split('@')[0];
+        const autoName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        memberUser = await User.create({
+          name: autoName,
+          email: emailItem,
+          avatar: '/images/default-avatar.png',
+        });
+      }
+
+      await GroupMember.create({
+        groupId: newGroup._id,
+        userId: memberUser._id,
+        role: 'member',
+        rotationPosition: pos,
+        color: MEMBER_COLORS[pos % MEMBER_COLORS.length],
+        status: 'active',
+      });
     }
 
     // 3. Auto-generate schedule for this new group (30 days ahead)

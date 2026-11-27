@@ -496,18 +496,21 @@ export default function ChaiCalendar({
                   dynamicUpcoming.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between text-xs sm:text-[13px] text-[#24140A] py-0.5 border-b border-[#F5E296]/70 last:border-none"
+                      className="flex items-center justify-between gap-2 text-xs sm:text-[13px] text-[#24140A] py-1 border-b border-[#F5E296]/70 last:border-none"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
                         <span
                           className="w-2 h-2 rounded-full shrink-0"
                           style={{ backgroundColor: item.dotColor }}
                         />
-                        <span className="font-medium">{item.dateStr}</span>
+                        <span className="font-medium whitespace-nowrap">{item.dateStr}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#6D533E] font-medium">—</span>
-                        <span className="font-bold text-[#1E1107] min-w-[55px] text-left">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[#6D533E] font-medium shrink-0">—</span>
+                        <span
+                          className="font-bold text-[#1E1107] truncate"
+                          title={item.name}
+                        >
                           {item.name}
                         </span>
                       </div>

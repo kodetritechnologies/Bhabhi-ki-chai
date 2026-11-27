@@ -134,6 +134,7 @@ export default function ChaiManagerDashboard() {
   const [isGroupsModalOpen, setIsGroupsModalOpen] = useState(false);
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+  const [holidayLoading, setHolidayLoading] = useState(false);
 
   // Fetch Dashboard Data
   const fetchDashboardData = useCallback(async (groupId?: string, userEmail?: string) => {
@@ -482,6 +483,35 @@ export default function ChaiManagerDashboard() {
                   totalMembers={members.length || 4}
                   lastBill={lastBillAmount}
                   onMarkCompleted={() => setIsCompleteModalOpen(true)}
+                  holidayLoading={holidayLoading}
+                  onMarkHoliday={async () => {
+                    if (!todayDuty?._id) return;
+                    if (!loggedInUser || todayDuty._id.startsWith('demo-')) {
+                      alert('Holiday mark karne ke liye pehle login karein.');
+                      return;
+                    }
+                    setHolidayLoading(true);
+                    try {
+                      const res = await fetch('/api/duty/holiday', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          dutyId: todayDuty._id,
+                          userEmail: loggedInUser.email,
+                        }),
+                      });
+                      const json = await res.json();
+                      if (!res.ok || !json.success) {
+                        alert(json.error || 'Holiday mark nahi ho paya.');
+                        return;
+                      }
+                      await fetchDashboardData(selectedGroupId || currentGroup?._id, loggedInUser.email);
+                    } catch {
+                      alert('Network error while marking holiday.');
+                    } finally {
+                      setHolidayLoading(false);
+                    }
+                  }}
                 />
               </div>
 
@@ -525,6 +555,7 @@ export default function ChaiManagerDashboard() {
                 <NotificationsCard
                   notifications={notifications}
                   onClearNotifications={handleMarkNotificationsRead}
+                  userEmail={loggedInUser?.email}
                 />
               </div>
             </div>
@@ -724,6 +755,7 @@ export default function ChaiManagerDashboard() {
               <NotificationsCard
                 notifications={notifications}
                 onClearNotifications={handleMarkNotificationsRead}
+                userEmail={loggedInUser?.email}
               />
             </div>
           </div>

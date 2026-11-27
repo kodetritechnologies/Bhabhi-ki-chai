@@ -21,6 +21,8 @@ interface TodayDutyCardProps {
   lastBill?: number;
   isUserDuty?: boolean;
   onMarkCompleted?: () => void;
+  onMarkHoliday?: () => void;
+  holidayLoading?: boolean;
 }
 
 function formatDisplayDate(dateInput?: string): string {
@@ -60,8 +62,11 @@ export default function TodayDutyCard({
   totalMembers = 4,
   lastBill = 100,
   onMarkCompleted,
+  onMarkHoliday,
+  holidayLoading = false,
 }: TodayDutyCardProps) {
   const isCompleted = status === 'completed';
+  const isSkipped = status === 'skipped';
   const userName = assignedUser?.name || 'Rahul';
   const displayDate = formatDisplayDate(dutyDateStr);
 
@@ -105,6 +110,11 @@ export default function TodayDutyCard({
               <>
                 <CheckCircle className="w-3.5 h-3.5" />
                 <span>Completed</span>
+              </>
+            ) : isSkipped ? (
+              <>
+                <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
+                <span>Holiday / Off</span>
               </>
             ) : (
               <>
@@ -191,20 +201,40 @@ export default function TodayDutyCard({
               </div>
             </div>
 
-            {/* Mark as Completed CTA Button */}
-            <div className="mt-2.5">
+            {/* Mark as Completed & Holiday CTA Buttons */}
+            <div className="mt-2.5 flex items-center gap-1.5 flex-nowrap">
               <button
                 onClick={onMarkCompleted}
-                disabled={isCompleted}
-                className={`px-3 sm:px-4 py-2 rounded-xl font-bold text-[11px] sm:text-xs lg:text-[13px] flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap ${
+                disabled={isCompleted || isSkipped}
+                className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold text-[10px] sm:text-[11px] lg:text-xs flex items-center justify-center gap-1 shadow-md transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0 ${
                   isCompleted
                     ? 'bg-[#2E7D32] text-white cursor-default'
+                    : isSkipped
+                    ? 'bg-[#8C7565] text-white cursor-default opacity-70'
                     : 'bg-[#1C140E] hover:bg-[#331E12] text-white'
                 }`}
               >
-                <span>{isCompleted ? 'Chai Completed' : 'Mark as Completed'}</span>
-                <span className="text-sm font-bold">✓</span>
+                <span>
+                  {isCompleted
+                    ? 'Completed'
+                    : isSkipped
+                    ? 'Holiday / Off'
+                    : 'Mark Completed'}
+                </span>
+                <span className="text-xs font-bold">{isSkipped ? '🌴' : '✓'}</span>
               </button>
+
+              {!isCompleted && !isSkipped && onMarkHoliday && (
+                <button
+                  type="button"
+                  onClick={onMarkHoliday}
+                  disabled={holidayLoading}
+                  title="Aaj chhutti hai — chai nahi bani, baari kal shift karein"
+                  className="px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl font-bold text-[10px] sm:text-[11px] bg-[#FFF3DF] hover:bg-[#F4CF96] text-[#5E2B08] border border-[#C99A5B] shadow-xs transition-all active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-60"
+                >
+                  {holidayLoading ? 'Shifting...' : 'Aaj Chhutti 🌴'}
+                </button>
+              )}
             </div>
           </div>
 

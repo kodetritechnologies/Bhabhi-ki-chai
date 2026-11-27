@@ -5,6 +5,9 @@ import { ChaiEntry } from '@/models/ChaiEntry';
 import { AuditLog } from '@/models/AuditLog';
 import { Notification } from '@/models/Notification';
 import { User } from '@/models/User';
+import { ChaiGroup } from '@/models/ChaiGroup';
+import { GroupMember } from '@/models/GroupMember';
+import { sendPushToUsers } from '@/lib/webPush';
 
 export async function POST(request: Request) {
   try {
@@ -55,8 +58,17 @@ export async function POST(request: Request) {
     );
 
     // 3. Add to Audit Log
-    const payer = await User.findById(payerId);
+    const [payer, group, activeMembers] = await Promise.all([
+      User.findById(payerId),
+      ChaiGroup.findById(duty.groupId).lean(),
+      GroupMember.find({ groupId: duty.groupId, status: 'active' }).lean(),
+    ]);
     const payerName = payer ? payer.name : 'Member';
+    const assignedObj = duty.assignedUserId as unknown as { _id?: { toString(): string }; name?: string } | null;
+    const assignedIdStr = assignedObj?._id?.toString() || duty.assignedUserId?.toString() || '';
+    const assignedName = assignedObj?.name || 'Member';
+    const isProxyPayer = payerId.toString() !== assignedIdStr;
+    const groupName = group?.name || 'Chai Group';
 
     await AuditLog.create({
       groupId: duty.groupId,
@@ -64,19 +76,45 @@ export async function POST(request: Request) {
       action: 'Chai Completed',
       entityType: 'ChaiEntry',
       entityId: entry._id.toString(),
-      reason: `₹${billAmount} paid by ${payerName}`,
+      reason: isProxyPayer
+        ? `${assignedName} ki jagah ${payerName} ne ₹${billAmount} pay kiya (${paymentStatus})`
+        : `₹${billAmount} paid by ${payerName} (${paymentStatus})`,
     });
 
-    // 4. Send In-App Notification
-    await Notification.create({
-      userId: currentUser ? currentUser._id : payerId,
-      groupId: duty.groupId,
-      type: 'payment_recorded',
-      title: 'Payment Recorded',
-      message: `₹${billAmount} added for ${duty.dutyDate}.`,
-      read: false,
-      timeAgoText: 'just now',
-    });
+    // 4. Send Fun In-App + Chrome Push Notifications to all group members
+    let notifTitle = `💸 Bill Paid — Wah Taj! (${groupName})`;
+    let notifBody = `${payerName} ne ₹${billAmount} ki kadak chai ka bill bhar diya (${note || 'Chai & Snacks'}). Shukriya boss!`;
+
+    if (isProxyPayer) {
+      notifTitle = `🦸‍♂️ Chai Hero Alert! (${groupName})`;
+      notifBody = `Waah! ${assignedName} aaj busy/chutti par the, to ${payerName} ne unki jagah ₹${billAmount} ki chai pila di! Kya baat hai!`;
+    } else if (paymentStatus === 'pending') {
+      notifTitle = `📝 Tapri Khata Update (${groupName})`;
+      notifBody = `${payerName} ki ₹${billAmount} ki chai ho gayi hai — payment abhi pending/khata me hai.`;
+    }
+
+    const memberIds = activeMembers.map((m) => m.userId.toString());
+    if (memberIds.length > 0) {
+      await Promise.all([
+        Notification.insertMany(
+          memberIds.map((uid) => ({
+            userId: uid,
+            groupId: duty.groupId,
+            type: 'payment_recorded',
+            title: notifTitle,
+            message: notifBody,
+            read: false,
+            timeAgoText: 'just now',
+          }))
+        ),
+        sendPushToUsers(memberIds, {
+          title: notifTitle,
+          body: notifBody,
+          url: '/',
+          tag: `chai-paid-${duty._id}`,
+        }),
+      ]);
+    }
 
     return NextResponse.json({
       success: true,
