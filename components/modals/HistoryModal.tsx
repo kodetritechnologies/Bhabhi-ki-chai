@@ -24,6 +24,7 @@ interface PaymentItem {
   amount: number;
   paymentStatus: 'paid' | 'pending' | 'not_recorded';
   note?: string;
+  guestPayerName?: string;
   createdAt?: string | Date;
   paidByUserId?: {
     _id?: string;
@@ -485,8 +486,13 @@ export default function HistoryModal({
                                       #{orderNumber}{isFirstEver ? ' • Sabse Pehle' : ''}
                                     </span>
                                     <span className="font-bold text-[#3B1B0D]">
-                                      {p.paidByUserId?.name || 'Member'}
+                                      {p.guestPayerName || p.paidByUserId?.name || 'Member'}
                                     </span>
+                                    {p.guestPayerName && (
+                                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#F4B52E]/25 text-[#8C4610] border border-[#F4B52E]/60">
+                                        Guest
+                                      </span>
+                                    )}
                                     {timeLabel && (
                                       <span className="text-[10px] text-[#8C6042]">• {timeLabel}</span>
                                     )}

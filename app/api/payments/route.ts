@@ -39,7 +39,10 @@ export async function GET(request: Request) {
       const header = 'Date,Paid By,Email,Amount (INR),Status,Note';
       const rows = allEntries.map((e) => {
         const payer = e.paidByUserId as unknown as { name?: string; email?: string } | null;
-        const safeName = (payer?.name || 'Member').replace(/"/g, '""');
+        const rawName = e.guestPayerName
+          ? `${e.guestPayerName} (Guest)`
+          : payer?.name || 'Member';
+        const safeName = rawName.replace(/"/g, '""');
         const safeEmail = (payer?.email || '').replace(/"/g, '""');
         const safeNote = (e.note || '').replace(/"/g, '""');
         return `"${e.dutyDate}","${safeName}","${safeEmail}",${e.amount},"${e.paymentStatus}","${safeNote}"`;
@@ -74,6 +77,7 @@ export async function GET(request: Request) {
       { userId: string; name: string; totalPaid: number; totalPending: number; count: number }
     >();
     for (const entry of allGroupEntries) {
+      if (entry.guestPayerName) continue; // Keep guest treats separate from member totals
       const payer = entry.paidByUserId as unknown as { _id?: { toString(): string }; name?: string } | null;
       const uid = payer?._id?.toString() || 'unknown';
       const name = payer?.name || 'Member';

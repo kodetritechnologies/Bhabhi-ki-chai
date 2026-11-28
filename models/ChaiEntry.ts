@@ -9,7 +9,8 @@ export interface IChaiEntry extends Document {
   dutyDate: string; // YYYY-MM-DD
   amount: number; // In Rupees
   currency: string;
-  paidByUserId: mongoose.Types.ObjectId;
+  paidByUserId?: mongoose.Types.ObjectId;
+  guestPayerName?: string;
   paymentStatus: PaymentStatus;
   dutyCompletionStatus: DutyCompletionStatus;
   note?: string;
@@ -31,7 +32,8 @@ const ChaiEntrySchema = new Schema<IChaiEntry>(
     dutyDate: { type: String, required: true },
     amount: { type: Number, required: true, default: 0 },
     currency: { type: String, default: 'INR' },
-    paidByUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    paidByUserId: { type: Schema.Types.ObjectId, ref: 'User', required: false },
+    guestPayerName: { type: String, default: '' },
     paymentStatus: {
       type: String,
       enum: ['not_recorded', 'pending', 'paid'],

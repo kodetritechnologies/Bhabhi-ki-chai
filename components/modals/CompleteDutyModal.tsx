@@ -37,14 +37,20 @@ export default function CompleteDutyModal({
 }: CompleteDutyModalProps) {
   const [amount, setAmount] = useState('100');
   const [paidByUserId, setPaidByUserId] = useState(duty?.assignedUserId?._id || '');
+  const [guestPayerName, setGuestPayerName] = useState('');
+  const [shiftTurnOnGuest, setShiftTurnOnGuest] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState<'paid' | 'pending'>('paid');
   const [note, setNote] = useState('4 Special Cutting Chai');
   const [submitting, setSubmitting] = useState(false);
+
+  const isGuestSelected = paidByUserId === '__guest__';
 
   useEffect(() => {
     if (isOpen) {
       setAmount('100');
       setPaidByUserId(duty?.assignedUserId?._id || '');
+      setGuestPayerName('');
+      setShiftTurnOnGuest(true);
       setPaymentStatus('paid');
       setNote('4 Special Cutting Chai');
     }
@@ -54,6 +60,11 @@ export default function CompleteDutyModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuestSelected && !guestPayerName.trim()) {
+      alert('Kripya guest / bahar wale payer ka naam enter karein.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch('/api/duty/complete', {
@@ -62,7 +73,9 @@ export default function CompleteDutyModal({
         body: JSON.stringify({
           dutyId: duty._id,
           amount: Number(amount) || 100,
-          paidByUserId: paidByUserId || duty.assignedUserId?._id,
+          paidByUserId: isGuestSelected ? undefined : paidByUserId || duty.assignedUserId?._id,
+          guestPayerName: isGuestSelected ? guestPayerName.trim() : '',
+          shiftTurnOnGuest: isGuestSelected ? shiftTurnOnGuest : false,
           paymentStatus,
           note,
         }),
@@ -143,10 +156,10 @@ export default function CompleteDutyModal({
             </div>
           </div>
 
-          {/* Paid By Member */}
+          {/* Paid By Member / Guest */}
           <div>
             <label className="block text-xs font-bold text-[#4A2412] mb-1">
-              Paid By Member
+              Paid By
             </label>
             <select
               value={paidByUserId || duty.assignedUserId?._id || ''}
@@ -158,7 +171,37 @@ export default function CompleteDutyModal({
                   {m.userId?.name}
                 </option>
               ))}
+              <option value="__guest__">👤 Guest / Bahar ka Banda (Other)</option>
             </select>
+
+            {isGuestSelected && (
+              <div className="mt-2.5 p-3 rounded-xl bg-[#FAF2E4] border border-[#E2CAA7] space-y-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-[#4A2412] mb-1">
+                    Guest / Payer ka Naam *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={guestPayerName}
+                    onChange={(e) => setGuestPayerName(e.target.value)}
+                    placeholder="e.g. Ramesh Sir / Client"
+                    className="w-full px-3 py-2 rounded-lg border border-[#D5BEA1] bg-white text-xs text-[#3B1B0D] focus:ring-2 focus:ring-[#F4B52E] outline-none"
+                  />
+                </div>
+                <label className="flex items-start gap-2 text-[11px] text-[#5E2B08] font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shiftTurnOnGuest}
+                    onChange={(e) => setShiftTurnOnGuest(e.target.checked)}
+                    className="mt-0.5 accent-[#8C4610] cursor-pointer"
+                  />
+                  <span>
+                    Aaj wale member ({duty.assignedUserId?.name || 'Member'}) ki baari kal shift karein (kyunki treat guest ne di hai)
+                  </span>
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Payment Status (PRD crucial requirement: Separate from duty status!) */}
