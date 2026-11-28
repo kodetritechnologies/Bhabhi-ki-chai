@@ -3,19 +3,43 @@ import { PushSubscription } from '@/models/PushSubscription';
 
 let vapidConfigured = false;
 
+function normalizeVapidSubject(raw?: string): string {
+  const cleaned = (raw || '').trim().replace(/^["']|["']$/g, '');
+  if (!cleaned) return 'mailto:admin@bhabhikichai.com';
+
+  let candidate = cleaned;
+  if (cleaned.includes('@') && !cleaned.startsWith('mailto:')) {
+    candidate = `mailto:${cleaned}`;
+  } else if (!/^https?:\/\//i.test(cleaned) && !cleaned.startsWith('mailto:')) {
+    candidate = `https://${cleaned}`;
+  }
+
+  try {
+    new URL(candidate);
+    return candidate;
+  } catch {
+    return 'mailto:admin@bhabhikichai.com';
+  }
+}
+
 function ensureVapidConfigured(): boolean {
   if (vapidConfigured) return true;
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@bhabhikichai.com';
+  const publicKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '').trim();
+  const privateKey = (process.env.VAPID_PRIVATE_KEY || '').trim();
+  const subject = normalizeVapidSubject(process.env.VAPID_SUBJECT);
 
   if (!publicKey || !privateKey) {
     return false;
   }
 
-  setVapidDetails(subject, publicKey, privateKey);
-  vapidConfigured = true;
-  return true;
+  try {
+    setVapidDetails(subject, publicKey, privateKey);
+    vapidConfigured = true;
+    return true;
+  } catch (err) {
+    console.error('VAPID configuration error:', err);
+    return false;
+  }
 }
 
 export interface PushPayload {
